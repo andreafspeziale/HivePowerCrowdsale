@@ -1,17 +1,15 @@
-var SafeMath = artifacts.require('./SafeMath.sol');
+var SafeMath = artifacts.require('zeppelin-solidity/contracts/math/SafeMath.sol');
 var HivePowerCrowdsale = artifacts.require('./HivePowerCrowdsale.sol');
 
 module.exports = function(deployer) {
-  var startBlock = 3000 * 1000;
-  var endBlock = 3100 * 1000;
+  var startTime = 1521115200;   // 15-03-2018 12:00 (UTC)
+  var endTime = 1521547200;     // 20-03-2018 12:00 (UTC)
   var rate = 2;
-  var tokenStartBlock = 3020 * 1000;;
-  var tokenLockEndBlock = 4000 * 1000;;
   var wallet = '0xa46a44c88c6bb62f41a723006a45506632f0c292';
 
   deployer.deploy(SafeMath);
   deployer.link(SafeMath, HivePowerCrowdsale);
-  deployer.deploy(HivePowerCrowdsale, startBlock, endBlock, rate, tokenStartBlock, tokenLockEndBlock, wallet);
+  deployer.deploy(HivePowerCrowdsale, startTime, endTime, rate, wallet);
 };
 
 /* How to get ABI-encoded input arguments (for publishing on Etherscan)

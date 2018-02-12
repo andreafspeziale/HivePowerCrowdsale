@@ -1,12 +1,12 @@
 pragma solidity 0.4.18;
 
 import 'zeppelin-solidity/contracts/math/SafeMath.sol';
-import './MintableInterface.sol';
+import './HVT.sol';
 
 /**
  * @title Crowdsale
  * @dev Crowdsale is a base contract for managing a token crowdsale.
- * Crowdsales have a start and end block, where investors can make
+ * Crowdsales have a start and end timestamps, where investors can make
  * token purchases and the crowdsale will assign them tokens based
  * on a token per ETH rate. Funds collected are forwarded to a wallet
  * as they arrive.
@@ -15,11 +15,11 @@ contract Crowdsale {
   using SafeMath for uint256;
 
   // The token being sold
-  MintableInterface public token;
+  HVT public token;
 
-  // start and end block where investments are allowed (both inclusive)
-  uint256 public startBlock;
-  uint256 public endBlock;
+  // start and end timestamps where investments are allowed (both inclusive)
+  uint256 public startTime;
+  uint256 public endTime;
 
   // address where funds are collected
   address public wallet;
@@ -40,32 +40,33 @@ contract Crowdsale {
   event TokenPurchase(address indexed purchaser, address indexed beneficiary, uint256 value, uint256 amount);
 
 
-  function Crowdsale(uint256 _startBlock, uint256 _endBlock, uint256 _rate, address _wallet) public {
-    require(_startBlock >= block.number);
-    require(_endBlock >= _startBlock);
+  function Crowdsale(uint256 _startTime, uint256 _endTime, uint256 _rate, address _wallet) public {
+    require(_startTime >= now);
+    require(_endTime >= _startTime);
     require(_rate > 0);
-    require(_wallet != 0x0);
+    require(_wallet != address(0));
 
-    startBlock = _startBlock;
-    endBlock = _endBlock;
+    token = createTokenContract();
+    startTime = _startTime;
+    endTime = _endTime;
     rate = _rate;
     wallet = _wallet;
   }
 
   // fallback function can be used to buy tokens
-  function () public payable {
+  function () external payable {
     buyTokens(msg.sender);
   }
 
   // low level token purchase function
   function buyTokens(address beneficiary) public payable {
-    require(beneficiary != 0x0);
+    require(beneficiary != address(0));
     require(validPurchase());
 
     uint256 weiAmount = msg.value;
 
     // calculate token amount to be created
-    uint256 tokens = weiAmount.mul(rate);
+    uint256 tokens = getTokenAmount(weiAmount);
 
     // update state
     weiRaised = weiRaised.add(weiAmount);
@@ -76,6 +77,22 @@ contract Crowdsale {
     forwardFunds();
   }
 
+  // @return true if crowdsale event has ended
+  function hasEnded() public view returns (bool) {
+    return now > endTime;
+  }
+
+  // creates the token to be sold.
+  // override this method to have crowdsale of a specific mintable token.
+  function createTokenContract() internal returns (HVT) {
+    return new HVT();
+  }
+
+  // Override this method to have a way to add business logic to your crowdsale when buying
+  function getTokenAmount(uint256 weiAmount) internal view returns(uint256) {
+    return weiAmount.mul(rate);
+  }
+
   // send ether to the fund collection wallet
   // override to create custom fund forwarding mechanisms
   function forwardFunds() internal {
@@ -83,17 +100,10 @@ contract Crowdsale {
   }
 
   // @return true if the transaction can buy tokens
-  function validPurchase() internal constant returns (bool) {
-    uint256 current = block.number;
-    bool withinPeriod = current >= startBlock && current <= endBlock;
+  function validPurchase() internal view returns (bool) {
+    bool withinPeriod = now >= startTime && now <= endTime;
     bool nonZeroPurchase = msg.value != 0;
     return withinPeriod && nonZeroPurchase;
   }
-
-  // @return true if crowdsale event has ended
-  function hasEnded() public constant returns (bool) {
-    return block.number > endBlock;
-  }
-
 
 }
