@@ -14,8 +14,9 @@ module.exports = function(deployer) {
 
 /* How to get ABI-encoded input arguments (for publishing on Etherscan)
 > var abi = require('ethereumjs-abi')
-> var parameterTypes = ["uint256", "uint256", "uint256", "uint256", "uint256", "address"];
-> var parameterValues = [3000 * 1000, 3100 * 1000, 2, 3020 * 1000,  4000 * 1000, '0xa46a44c88c6bb62f41a723006a45506632f0c292'];
+> var parameterTypes = ["uint256", "uint256", "uint256", "address"];
+> var parameterValues = [1521115200, 1521547200, 2, '0xa46a44c88c6bb62f41a723006a45506632f0c292'];
 > var encoded = abi.rawEncode(parameterTypes, parameterValues);
 > console.log(encoded.toString('hex'));
+000000000000000000000000000000000000000000000000000000005aaa6040000000000000000000000000000000000000000000000000000000005ab0f7c00000000000000000000000000000000000000000000000000000000000000002000000000000000000000000a46a44c88c6bb62f41a723006a45506632f0c292
 */
