@@ -1,6 +1,5 @@
 pragma solidity 0.4.18;
 
-/* Importing section */
 import './Ownable.sol';
 import './SafeMath.sol';
 import './MintableInterface.sol';
@@ -42,7 +41,7 @@ import './TokenTimelock.sol';
      uint256 _tokenStartBlock,
      uint256 _tokenLockEndBlock,
      address _wallet)
-     Crowdsale(_startBlock, _endBlock, _rate, _wallet) {
+     Crowdsale(_startBlock, _endBlock, _rate, _wallet) public {
        token = new HVT(_tokenStartBlock, _tokenLockEndBlock);
 
        // create timelocks for tokens

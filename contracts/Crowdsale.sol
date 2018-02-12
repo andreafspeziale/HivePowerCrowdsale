@@ -1,6 +1,5 @@
 pragma solidity 0.4.18;
 
-/* Importing section */
 import './SafeMath.sol';
 import './MintableInterface.sol';
 
@@ -41,7 +40,7 @@ contract Crowdsale {
   event TokenPurchase(address indexed purchaser, address indexed beneficiary, uint256 value, uint256 amount);
 
 
-  function Crowdsale(uint256 _startBlock, uint256 _endBlock, uint256 _rate, address _wallet) {
+  function Crowdsale(uint256 _startBlock, uint256 _endBlock, uint256 _rate, address _wallet) public {
     require(_startBlock >= block.number);
     require(_endBlock >= _startBlock);
     require(_rate > 0);
@@ -54,12 +53,12 @@ contract Crowdsale {
   }
 
   // fallback function can be used to buy tokens
-  function () payable {
+  function () public payable {
     buyTokens(msg.sender);
   }
 
   // low level token purchase function
-  function buyTokens(address beneficiary) payable {
+  function buyTokens(address beneficiary) public payable {
     require(beneficiary != 0x0);
     require(validPurchase());
 

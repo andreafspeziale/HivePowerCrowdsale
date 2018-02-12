@@ -1,6 +1,5 @@
 pragma solidity 0.4.18;
 
-/* Importing section */
 import './Crowdsale.sol';
 
 /**
@@ -23,7 +22,7 @@ import './Crowdsale.sol';
    }
 
    // overriding Crowdsale#buyTokens to add extra tokenCap logic
-   function buyTokens(address beneficiary) payable {
+   function buyTokens(address beneficiary) public payable {
      // calculate token amount to be created
      uint256 tokens = msg.value.mul(rate);
      uint256 newTotalSold = soldTokens.add(tokens);

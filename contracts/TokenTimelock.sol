@@ -1,6 +1,5 @@
 pragma solidity 0.4.18;
 
-/* Importing section */
 import './ERC20.sol';
 
 /**
@@ -19,7 +18,7 @@ import './ERC20.sol';
    // timestamp when token release is enabled
    uint public releaseTime;
 
-   function TokenTimelock(ERC20Basic _token, address _beneficiary, uint _releaseTime) {
+   function TokenTimelock(ERC20Basic _token, address _beneficiary, uint _releaseTime) public {
      require(_releaseTime > now);
      token = _token;
      beneficiary = _beneficiary;
@@ -29,7 +28,7 @@ import './ERC20.sol';
    /**
     * @notice Transfers tokens held by timelock to beneficiary.
     */
-   function release() {
+   function release() public {
      require(now >= releaseTime);
 
      uint amount = token.balanceOf(this);
