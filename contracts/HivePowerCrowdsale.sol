@@ -41,6 +41,10 @@ contract HivePowerCrowdsale is Ownable {
   uint256 public capPreSale;
   uint256 public capSale;
 
+  // additional tokens (i.e. for private sales, airdrops, referrals, etc.)
+  uint256 public additionalTokens;
+  bool public additionalTokensMinted;
+
   /**
    * event for token purchase logging
    * @param purchaser who paid for the tokens
@@ -50,6 +54,10 @@ contract HivePowerCrowdsale is Ownable {
    */
   event TokenPurchase(address indexed purchaser, address indexed beneficiary, uint256 value, uint256 amount);
 
+  /**
+   * event for additional token minting
+   */
+  event MintedAdditionalTokens(address indexed to, uint256 amount);
 
   function HivePowerCrowdsale(uint256 _startTimePreSale,
                               uint256 _endTimePreSale,
@@ -59,6 +67,7 @@ contract HivePowerCrowdsale is Ownable {
                               uint256 _rateSale,
                               uint256 _capPreSale,
                               uint256 _capSale,
+                              uint256 _additionalTokens,
                               address _wallet)
                               public {
     // Check input arguments
@@ -88,6 +97,9 @@ contract HivePowerCrowdsale is Ownable {
 
     capPreSale = _capPreSale;
     capSale = _capSale;
+
+    additionalTokens = _additionalTokens;
+    additionalTokensMinted = false;
 
     wallet = _wallet;
   }
@@ -145,7 +157,7 @@ contract HivePowerCrowdsale is Ownable {
   }
 
   // @return true if crowdsale is the between PreSale and Sale phases
-  function betweenPreSaleAndSale() public view returns (bool) {
+  function isBetweenPreSaleAndSale() public view returns (bool) {
     bool reachedPreSaleCap = now >= startTimePreSale && now <= endTimePreSale && weiRaisedPreSale >= capPreSale;
     bool withinBetweenPeriod = now > endTimePreSale && now < startTimeSale;
     return withinBetweenPeriod || reachedPreSaleCap;
@@ -194,8 +206,21 @@ contract HivePowerCrowdsale is Ownable {
     bool withinPeriodSale = now >= startTimeSale && now <= endTimeSale && weiRaisedSale.add(msg.value) <= capSale;
     bool withinPeriod = withinPeriodPreSale || withinPeriodSale;
     bool nonZeroPurchase = msg.value != 0;
-
     return withinPeriod && nonZeroPurchase;
   }
 
+  /**
+   * @dev mint additional tokens (i.e. for airdrops, referrals, founders, etc.) and assign them to the owner
+   * @return True if the finishMinting operation was successful.
+   */
+  function mintAdditionalTokens() onlyOwner public {
+    require(hasEnded());
+    require(!additionalTokensMinted);
+    require(additionalTokens>0);
+
+    token.mint(owner, additionalTokens);
+    token.finishMinting();
+    additionalTokensMinted = true;
+    MintedAdditionalTokens(owner, additionalTokens);
+  }
 }
