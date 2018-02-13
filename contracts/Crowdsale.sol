@@ -5,13 +5,13 @@ import './HVT.sol';
 
 /**
  * @title Crowdsale
- * @dev Crowdsale is a base contract for managing a token crowdsale.
- * Crowdsales have a start and end timestamps fro two differe3nt phases (PreSale and Sale),
+ * @dev Crowdsale is a contract for managing a token crowdsale taken referring to OpenZeppelin Crowdsale and CappedCrowdsale contract.
+ * Crowdsales have a start and end timestamps for two different phases (PreSale and Sale),
  * where investors can make token purchases and the crowdsale will assign them tokens based
  * on a token per ETH rate (different in the phases). Funds collected are forwarded to a wallet
- * as they arrive.
+ * as they arrive. Each phase has its cap.
  */
-contract Crowdsale {
+contract Crowdsale is Ownable {
   using SafeMath for uint256;
 
   // The token being sold
@@ -34,6 +34,12 @@ contract Crowdsale {
 
   // amount of raised money in wei
   uint256 public weiRaised;
+  uint256 public weiRaisedPreSale;
+  uint256 public weiRaisedSale;
+
+  // caps
+  uint256 public capPreSale;
+  uint256 public capSale;
 
   /**
    * event for token purchase logging
@@ -45,15 +51,17 @@ contract Crowdsale {
   event TokenPurchase(address indexed purchaser, address indexed beneficiary, uint256 value, uint256 amount);
 
 
-  function Crowdsale(
-                      uint256 _startTimePreSale,
-                      uint256 _endTimePreSale,
-                      uint256 _startTimeSale,
-                      uint256 _endTimeSale,
-                      uint256 _ratePreSale,
-                      uint256 _rateSale,
-                      address _wallet)
-                      public {
+  function Crowdsale(uint256 _startTimePreSale,
+                     uint256 _endTimePreSale,
+                     uint256 _startTimeSale,
+                     uint256 _endTimeSale,
+                     uint256 _ratePreSale,
+                     uint256 _rateSale,
+                     uint256 _capPreSale,
+                     uint256 _capSale,
+                     address _wallet)
+                     public {
+    // Check input arguments
     require(_startTimePreSale >= now);
     require(_endTimePreSale >= _startTimePreSale);
     require(_startTimeSale >= _endTimePreSale);
@@ -62,8 +70,12 @@ contract Crowdsale {
     require(_ratePreSale > 0);
     require(_rateSale > 0);
 
+    require(_capPreSale > 0);
+    require(_capSale > 0);
+
     require(_wallet != address(0));
 
+    // Initialize variables
     token = createTokenContract();
 
     startTimePreSale = _startTimePreSale;
@@ -73,6 +85,9 @@ contract Crowdsale {
 
     ratePreSale = _ratePreSale;
     rateSale = _rateSale;
+
+    capPreSale = _capPreSale;
+    capSale = _capSale;
 
     wallet = _wallet;
   }
@@ -88,22 +103,35 @@ contract Crowdsale {
     require(validPurchase());
 
     uint256 weiAmount = msg.value;
+    uint256 tokens;
 
-    // calculate token amount to be created
-    uint256 tokens = getTokenAmount(weiAmount);
+    // PreSale phase
+    if(isPreSaleRunning())
+    {
+      // calculate token amount to be created and update state
+      tokens = getTokenAmount(weiAmount, ratePreSale);
+      weiRaisedPreSale = weiRaisedPreSale.add(weiAmount);
+      weiRaised = weiRaised.add(weiAmount);
 
-    // update state
-    weiRaised = weiRaised.add(weiAmount);
+      // mint tokens and transfer funds
+      token.mint(beneficiary, tokens);
+      TokenPurchase(msg.sender, beneficiary, weiAmount, tokens);
+      forwardFunds();
+    }
 
-    token.mint(beneficiary, tokens);
-    TokenPurchase(msg.sender, beneficiary, weiAmount, tokens);
+    // Sale phase
+    if(isSaleRunning())
+    {
+      // calculate token amount to be created and update state
+      tokens = getTokenAmount(weiAmount, rateSale);
+      weiRaisedSale = weiRaisedSale.add(weiAmount);
+      weiRaised = weiRaised.add(weiAmount);
 
-    forwardFunds();
-  }
-
-  // @return true if crowdsale (presale + sale) event has ended
-  function hasEnded() public view returns (bool) {
-    return now > endTimeSale;
+      // mint tokens and transfer funds
+      token.mint(beneficiary, tokens);
+      TokenPurchase(msg.sender, beneficiary, weiAmount, tokens);
+      forwardFunds();
+    }
   }
 
   // @return true if crowdsale is in the init phase (before PreSale)
@@ -112,48 +140,51 @@ contract Crowdsale {
   }
 
   // @return true if crowdsale is running the PreSale phase
-  function isPreSaleRunnig() public view returns (bool) {
-    return now >= startTimePreSale && now <= endTimePreSale;
+  function isPreSaleRunning() public view returns (bool) {
+    return now >= startTimePreSale && now <= endTimePreSale && weiRaisedPreSale < capPreSale;
   }
 
   // @return true if crowdsale is the between PreSale and Sale phases
   function betweenPreSaleAndSale() public view returns (bool) {
-    return now > endTimePreSale && now < startTimeSale;
+    bool reachedPreSaleCap = now >= startTimePreSale && now <= endTimePreSale && weiRaisedPreSale >= capPreSale;
+    bool withinBetweenPeriod = now > endTimePreSale && now < startTimeSale;
+    return withinBetweenPeriod || reachedPreSaleCap;
   }
 
   // @return true if crowdsale is running the Sale phase
-  function isSaleRunnig() public view returns (bool) {
-    return now >= startTimeSale && now <= endTimeSale;
+  function isSaleRunning() public view returns (bool) {
+    return now >= startTimeSale && now <= endTimeSale && weiRaisedSale < capSale;
   }
 
-  // creates the token to be sold.
-  // override this method to have crowdsale of a specific mintable token.
+  // @return true if crowdsale (presale + sale) event has ended (i.e. the second phase has ended)
+  function hasEnded() public view returns (bool) {
+    bool reachedSaleCap = weiRaisedSale >= capSale;
+    bool withinPeriod = now > endTimeSale;
+    return reachedSaleCap || withinPeriod;
+  }
+
+  // @return HVT (Mintable Token) token instance
   function createTokenContract() internal returns (HVT) {
     return new HVT();
   }
 
-  // Override this method to have a way to add business logic to your crowdsale when buying
-  function getTokenAmount(uint256 weiAmount) internal view returns(uint256) {
-    if(now >= startTimePreSale && now <= endTimePreSale) {
-      return weiAmount.mul(ratePreSale);
-    }
-    else if (now >= startTimeSale && now <= endTimeSale) {
-      return weiAmount.mul(rateSale);
-    }
+  // @return token amount in dependency on a given rate
+  function getTokenAmount(uint256 weiAmount, uint256 rate) internal pure returns(uint256) {
+    return weiAmount.mul(rate);
   }
 
   // send ether to the fund collection wallet
-  // override to create custom fund forwarding mechanisms
   function forwardFunds() internal {
     wallet.transfer(msg.value);
   }
 
   // @return true if the transaction can buy tokens
   function validPurchase() internal view returns (bool) {
-    bool withinPeriodPreSale = now >= startTimePreSale && now <= endTimePreSale;
-    bool withinPeriodSale = now >= startTimeSale && now <= endTimeSale;
+    bool withinPeriodPreSale = now >= startTimePreSale && now <= endTimePreSale && weiRaisedPreSale.add(msg.value) <= capPreSale;
+    bool withinPeriodSale = now >= startTimeSale && now <= endTimeSale && weiRaisedSale.add(msg.value) <= capSale;
     bool withinPeriod = withinPeriodPreSale || withinPeriodSale;
     bool nonZeroPurchase = msg.value != 0;
+
     return withinPeriod && nonZeroPurchase;
   }
 
