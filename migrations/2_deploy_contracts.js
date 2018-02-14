@@ -33,14 +33,14 @@ module.exports = function(deployer, network, accounts) {
   else if (network == 'ropsten')
   {
     // PreSale phase
-    var startTimePreSale = 1521115200;                        // 15-03-2018 12:00 (UTC)
-    var endTimePreSale = 1521547200;                          // 20-03-2018 12:00 (UTC)
+    var startTimePreSale = 1518588000;                        // 14-02-2018 06:00 (UTC)
+    var endTimePreSale = 1518602400;                          // 14-02-2018 10:00 (UTC)
     var ratePreSale = parseInt(0.00025 * 1e18 / (1 - 0.3));   // Token = wei * rate
     var capPreSale = 3500 * 1e18;                             // Maximum cap (wei) (1e18 = 1000000000000000000)
 
     // Sale phase
-    var startTimeSale = 1521979200;                           // 25-03-2018 12:00 (UTC)
-    var endTimeSale = 1522411200;                             // 30-03-2018 12:00 (UTC)
+    var startTimeSale = 1518609600;                           // 14-02-2018 12:00 (UTC)
+    var endTimeSale = 1518620400;                             // 14-02-2018 17:00 (UTC)
     var rateSale = parseInt(0.00025 * 1e18 / (1 - 0.05));     // Token = wei * rate
     var capSale = 7125 * 1e18;                                // Maximum cap (wei) (1e18 = 1000000000000000000)
 

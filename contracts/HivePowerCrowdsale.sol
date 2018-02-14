@@ -1,7 +1,11 @@
 pragma solidity 0.4.18;
 
 import 'zeppelin-solidity/contracts/math/SafeMath.sol';
+import 'zeppelin-solidity/contracts/ownership/Ownable.sol';
+import 'zeppelin-solidity/contracts/crowdsale/RefundVault.sol';
 import './HVT.sol';
+/*import './ICOEngineInterface.sol';*/
+/*import './KYCBase.sol';*/
 
 /**
  * @title HivePowerCrowdsale
@@ -11,6 +15,7 @@ import './HVT.sol';
  * on a token per ETH rate (different in the phases). Funds collected are forwarded to a wallet
  * as they arrive. Each phase has its cap.
  */
+/*contract HivePowerCrowdsale is Ownable, ICOEngineInterface, KYCBase {*/
 contract HivePowerCrowdsale is Ownable {
   using SafeMath for uint256;
 
@@ -43,7 +48,13 @@ contract HivePowerCrowdsale is Ownable {
 
   // additional tokens (i.e. for private sales, airdrops, referrals, etc.)
   uint256 public additionalTokens;
-  bool public additionalTokensMinted;
+
+  // is the ICO successfully(not) finalized
+  bool public isFinalizedOK = false;
+  bool public isFinalizedNOK = false;
+
+  // refund vault used to hold funds while crowdsale is running
+  RefundVault public vault;
 
   /**
    * event for token purchase logging
@@ -53,6 +64,12 @@ contract HivePowerCrowdsale is Ownable {
    * @param amount amount of tokens purchased
    */
   event TokenPurchase(address indexed purchaser, address indexed beneficiary, uint256 value, uint256 amount);
+
+  /* ICO successfully finalized */
+  event FinalizedOK();
+
+  /* ICO not successfully finalized */
+  event FinalizedNOK();
 
   /**
    * event for additional token minting
@@ -99,9 +116,13 @@ contract HivePowerCrowdsale is Ownable {
     capSale = _capSale;
 
     additionalTokens = _additionalTokens;
-    additionalTokensMinted = false;
+
+    isFinalizedOK = false;
+    isFinalizedNOK = false;
 
     wallet = _wallet;
+
+    vault = new RefundVault(wallet);
   }
 
   // fallback function can be used to buy tokens
@@ -111,6 +132,7 @@ contract HivePowerCrowdsale is Ownable {
 
   // low level token purchase function
   function buyTokens(address beneficiary) public payable {
+  /*function releaseTokensTo(address beneficiary) payable public returns(bool) {*/
     require(beneficiary != address(0));
     require(validPurchase());
 
@@ -195,11 +217,6 @@ contract HivePowerCrowdsale is Ownable {
     return weiAmount.mul(rate);
   }
 
-  // send ether to the fund collection wallet
-  function forwardFunds() internal {
-    wallet.transfer(msg.value);
-  }
-
   // @return true if the transaction can buy tokens
   function validPurchase() internal view returns (bool) {
     bool withinPeriodPreSale = now >= startTimePreSale && now <= endTimePreSale && weiRaisedPreSale.add(msg.value) <= capPreSale;
@@ -210,17 +227,139 @@ contract HivePowerCrowdsale is Ownable {
   }
 
   /**
-   * @dev mint additional tokens (i.e. for airdrops, referrals, founders, etc.) and assign them to the owner
-   * @return True if the finishMinting operation was successful.
+   * @dev finalize a successful ICO:
+   * -> mint additional tokens (i.e. for airdrops, referrals, founders, etc.) and assign them to the owner
+   * -> release sold token for the transfers
+   * -> close the vault
+   * -> close the ICO successfully
    */
-  function mintAdditionalTokens() onlyOwner public {
+  function finalizeOK() onlyOwner public {
+    require(!isFinalizedOK);
+    require(!isFinalizedNOK);
     require(hasEnded());
-    require(!additionalTokensMinted);
-    require(additionalTokens>0);
 
-    token.mint(owner, additionalTokens);
-    token.finishMinting();
-    additionalTokensMinted = true;
-    MintedAdditionalTokens(owner, additionalTokens);
+    // Check the soft cap
+
+    // Mint additional tokens (referral, airdrops, etc.)
+    if(additionalTokens > 0) {
+      token.mint(owner, additionalTokens);
+      token.finishMinting();
+      MintedAdditionalTokens(owner, additionalTokens);
+    }
+
+    // Enabling token transfers
+    token.enableTokenTransfers();
+
+    // Close the vault
+    vault.close();
+
+    // ICO successfully finalised
+    isFinalizedOK = true;
+    FinalizedOK();
+  }
+
+  /**
+   * @dev finalize a unsuccessful ICO:
+   * -> enable the refund
+   * -> close the ICO not successfully
+   */
+   function finalizeNOK() onlyOwner public {
+     require(!isFinalizedOK);
+     require(!isFinalizedNOK);
+     require(hasEnded());
+
+     // enable the refunds
+     vault.enableRefunds();
+
+     // ICO not successfully finalised
+     isFinalizedNOK = true;
+     FinalizedNOK();
+   }
+
+   // if crowdsale is unsuccessful, investors can claim refunds here
+   function claimRefund() public {
+     require(isFinalizedNOK);
+
+     vault.refund(msg.sender);
+  }
+
+  // Overriding the fund forwarding from Crowdsale.
+  // In addition to sending the funds, we want to call
+  // the RefundVault deposit function
+  function forwardFunds() internal {
+    vault.deposit.value(msg.value)(msg.sender);
+  }
+
+  /*******************************************************************
+  * ICOEngineInterface functions implementations for Eidoo platform  *
+  *******************************************************************/
+
+   // false if the ico is not started, true if the ico is started and running, true if the ico is completed
+  function started() public view returns(bool) {
+    return isPreSaleRunning() || isSaleRunning();
+  }
+
+  // false if the ico is not started, true if the ico is started and running, true if the ico is completed
+  function endend() public view returns(bool) {
+    return isBetweenPreSaleAndSale() || hasEnded();
+  }
+
+  // time stamp of the starting time of the ico, must return 0 if it depends on the block number
+  function startTime() public view returns(uint256) {
+    if(isPreSaleRunning()) {
+      return startTimePreSale;
+    }
+    else if(isSaleRunning()) {
+      return startTimePreSale;
+    }
+    else {
+      return 0;
+    }
+  }
+
+  // time stamp of the ending time of the ico, must retrun 0 if it depends on the block number
+  function endTime() public view returns(uint) {
+    if(isPreSaleRunning()) {
+      return endTimeSale;
+    }
+    else if(isSaleRunning()) {
+      return endTimeSale;
+    }
+    else {
+      return 0;
+    }
+  }
+
+  // returns the total number of the tokens available for the sale, must not change when the ico is started
+  function totalTokens() public view returns(uint) {
+    if(isPreSaleRunning()) {
+      return getTokenAmount(capPreSale, ratePreSale);
+    }
+    else if(isSaleRunning()) {
+      uint256 totalCapTokens = getTokenAmount(capPreSale, ratePreSale);
+      return totalCapTokens.add(getTokenAmount(capSale, rateSale));
+    }
+    else {
+      return 0;
+    }
+  }
+
+  // returns the number of the tokens available for the ico. At the moment that the ico starts it must be equal to totalTokens(),
+  // then it will decrease. It is used to calculate the percentage of sold tokens as remainingTokens() / totalTokens()
+  function remainingTokens() public view returns(uint) {
+    uint256 totTokens = totalTokens();
+    uint256 raisedTokens;
+    if(isPreSaleRunning()) {
+      raisedTokens = getTokenAmount(weiRaisedPreSale, ratePreSale);
+      return totTokens.sub(getTokenAmount(weiRaisedPreSale, ratePreSale));
+    }
+    else if(isSaleRunning()) {
+      raisedTokens = getTokenAmount(weiRaisedPreSale, ratePreSale);
+      raisedTokens = raisedTokens.add(getTokenAmount(weiRaisedSale, rateSale));
+      return totTokens.sub(getTokenAmount(capSale, rateSale));
+    }
+    else {
+      return 0;
+    }
   }
 }
