@@ -27,8 +27,11 @@ module.exports = function(deployer, network, accounts) {
     // Wallet
     var wallet = accounts[0];
 
-    // Wallet
+    // Additional tokens
     var additionalTokens = 4 * 1e18;
+
+    // Goal
+    var goal = 4 * 1e18;
   }
   else if (network == 'ropsten')
   {
@@ -47,8 +50,11 @@ module.exports = function(deployer, network, accounts) {
     // Wallet
     var wallet = '0xa46a44c88c6bb62f41a723006a45506632f0c292';
 
-    // Wallet
+    // Additional tokens
     var additionalTokens = 50000000;
+
+    // Goal
+    var goal = 1000 * 1e18;
   }
 
   deployer.deploy(SafeMath);
@@ -63,5 +69,6 @@ module.exports = function(deployer, network, accounts) {
                   capPreSale,
                   capSale,
                   additionalTokens,
+                  goal,
                   wallet);
 };

@@ -56,6 +56,9 @@ contract HivePowerCrowdsale is Ownable {
   // refund vault used to hold funds while crowdsale is running
   RefundVault public vault;
 
+  // minimum amount of funds to be raised in weis
+  uint256 public goal;
+
   /**
    * event for token purchase logging
    * @param purchaser who paid for the tokens
@@ -85,6 +88,7 @@ contract HivePowerCrowdsale is Ownable {
                               uint256 _capPreSale,
                               uint256 _capSale,
                               uint256 _additionalTokens,
+                              uint256 _goal,
                               address _wallet)
                               public {
     // Check input arguments
@@ -98,6 +102,10 @@ contract HivePowerCrowdsale is Ownable {
 
     require(_capPreSale > 0);
     require(_capSale > 0);
+
+    uint256 sumCaps = _capPreSale;
+    sumCaps = sumCaps.add(capSale);
+    require(_goal < sumCaps);
 
     require(_wallet != address(0));
 
@@ -116,6 +124,8 @@ contract HivePowerCrowdsale is Ownable {
     capSale = _capSale;
 
     additionalTokens = _additionalTokens;
+
+    goal = _goal;
 
     isFinalizedOK = false;
     isFinalizedNOK = false;
@@ -227,39 +237,47 @@ contract HivePowerCrowdsale is Ownable {
   }
 
   /**
-   * @dev finalize a successful ICO:
+   * @dev finalize an ICO in dependency of the goal reaching:
+   * 1) reached goal (successful ICO):
    * -> mint additional tokens (i.e. for airdrops, referrals, founders, etc.) and assign them to the owner
    * -> release sold token for the transfers
    * -> close the vault
    * -> close the ICO successfully
+   * 2) not reached goal (not successful ICO):
+   * -> call finalizeNOK()
    */
-  function finalizeOK() onlyOwner public {
+  function finalize() onlyOwner public {
     require(!isFinalizedOK);
     require(!isFinalizedNOK);
     require(hasEnded());
 
-    // Check the soft cap
+    // Check the goal reaching
+    if(weiRaised >= goal) {
+      // Mint additional tokens (referral, airdrops, etc.)
+      if(additionalTokens > 0) {
+        token.mint(owner, additionalTokens);
+        token.finishMinting();
+        MintedAdditionalTokens(owner, additionalTokens);
+      }
 
-    // Mint additional tokens (referral, airdrops, etc.)
-    if(additionalTokens > 0) {
-      token.mint(owner, additionalTokens);
-      token.finishMinting();
-      MintedAdditionalTokens(owner, additionalTokens);
+      // Enabling token transfers
+      token.enableTokenTransfers();
+
+      // Close the vault
+      vault.close();
+
+      // ICO successfully finalised
+      isFinalizedOK = true;
+      FinalizedOK();
     }
-
-    // Enabling token transfers
-    token.enableTokenTransfers();
-
-    // Close the vault
-    vault.close();
-
-    // ICO successfully finalised
-    isFinalizedOK = true;
-    FinalizedOK();
+    else {
+      // ICO not successfully finalised
+      finalizeNOK();
+    }
   }
 
   /**
-   * @dev finalize a unsuccessful ICO:
+   * @dev finalize an unsuccessful ICO:
    * -> enable the refund
    * -> close the ICO not successfully
    */
