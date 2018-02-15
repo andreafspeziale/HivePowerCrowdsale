@@ -3,50 +3,55 @@ pragma solidity 0.4.18;
 import 'zeppelin-solidity/contracts/math/SafeMath.sol';
 import 'zeppelin-solidity/contracts/ownership/Ownable.sol';
 import 'zeppelin-solidity/contracts/crowdsale/RefundVault.sol';
+import 'zeppelin-solidity/contracts/token/ERC20/TokenTimelock.sol';
 import './HVT.sol';
 /*import './ICOEngineInterface.sol';*/
 /*import './KYCBase.sol';*/
 
 /**
  * @title HivePowerCrowdsale
- * @dev HivePowerCrowdsale is a contract for managing a token crowdsale taken referring to OpenZeppelin Crowdsale and CappedCrowdsale contract.
- * Crowdsales have a start and end timestamps for two different phases (PreSale and Sale),
- * where investors can make token purchases and the crowdsale will assign them tokens based
- * on a token per ETH rate (different in the phases). Funds collected are forwarded to a wallet
- * as they arrive. Each phase has its cap.
+ * @dev HivePowerCrowdsale is a contract for managing a token crowdsale taken referring to OpenZeppelin crowdsale contracts.
+ * HivePowerCrowdsale is constituted by two different phases, following called Batch1 and Batch2).
+ * Each phase has a start and end timestamp where investors can make token purchases and the contract will assign them
+ * tokens basing on a token per ETH rate. Each phase has its maximum cap.
+ * Funds collected are forwarded to a vault as they arrive.
+ * If the ICO will be successful then the total fund is sent to a wallet, otherwise all will be refunded
  */
-/*contract HivePowerCrowdsale is Ownable, ICOEngineInterface, KYCBase {*/
+/*contract HivePowerCrowdBatch2 is Ownable, ICOEngineInterface, KYCBase {*/
 contract HivePowerCrowdsale is Ownable {
   using SafeMath for uint256;
 
   // The token being sold
   HVT public token;
 
-  // start and end timestamps where investments are allowed (both inclusive) (PreSale phase)
-  uint256 public startTimePreSale;
-  uint256 public endTimePreSale;
+  // start and end timestamps where investments are allowed (both inclusive) (Batch1 phase)
+  uint256 public startTimeBatch1;
+  uint256 public endTimeBatch1;
 
-  // start and end timestamps where investments are allowed (both inclusive) (Sale phase)
-  uint256 public startTimeSale;
-  uint256 public endTimeSale;
+  // start and end timestamps where investments are allowed (both inclusive) (Batch2 phase)
+  uint256 public startTimeBatch2;
+  uint256 public endTimeBatch2;
 
   // address where funds are collected
   address public wallet;
 
-  // how many token units a buyer gets per wei (PreSale and Sale phases)
-  uint256 public ratePreSale;
-  uint256 public rateSale;
+  // how many token units a buyer gets per wei (Batch1 and Batch2 phases)
+  uint256 public rateBatch1;
+  uint256 public rateBatch2;
 
   // amount of raised money in wei
   uint256 public weiRaised;
-  uint256 public weiRaisedPreSale;
-  uint256 public weiRaisedSale;
+  uint256 public weiRaisedBatch1;
+  uint256 public weiRaisedBatch2;
 
   // caps
-  uint256 public capPreSale;
-  uint256 public capSale;
+  uint256 public capBatch1;
+  uint256 public capBatch2;
 
-  // additional tokens (i.e. for private sales, airdrops, referrals, etc.)
+  // tokens assigned to the founders and timelocked
+  uint256 public foundersTokens;
+
+  // additional tokens (i.e. for private Batch2s, airdrops, referrals, etc.)
   uint256 public additionalTokens;
 
   // is the ICO successfully(not) finalized
@@ -79,32 +84,33 @@ contract HivePowerCrowdsale is Ownable {
    */
   event MintedAdditionalTokens(address indexed to, uint256 amount);
 
-  function HivePowerCrowdsale(uint256 _startTimePreSale,
-                              uint256 _endTimePreSale,
-                              uint256 _startTimeSale,
-                              uint256 _endTimeSale,
-                              uint256 _ratePreSale,
-                              uint256 _rateSale,
-                              uint256 _capPreSale,
-                              uint256 _capSale,
+  function HivePowerCrowdBatch2(uint256 _startTimeBatch1,
+                              uint256 _endTimeBatch1,
+                              uint256 _startTimeBatch2,
+                              uint256 _endTimeBatch2,
+                              uint256 _rateBatch1,
+                              uint256 _rateBatch2,
+                              uint256 _capBatch1,
+                              uint256 _capBatch2,
+                              uint256 _foundersTokens,
                               uint256 _additionalTokens,
                               uint256 _goal,
                               address _wallet)
                               public {
     // Check input arguments
-    require(_startTimePreSale >= now);
-    require(_endTimePreSale >= _startTimePreSale);
-    require(_startTimeSale >= _endTimePreSale);
-    require(_endTimeSale >= _startTimeSale);
+    require(_startTimeBatch1 >= now);
+    require(_endTimeBatch1 >= _startTimeBatch1);
+    require(_startTimeBatch2 >= _endTimeBatch1);
+    require(_endTimeBatch2 >= _startTimeBatch2);
 
-    require(_ratePreSale > 0);
-    require(_rateSale > 0);
+    require(_rateBatch1 > 0);
+    require(_rateBatch2 > 0);
 
-    require(_capPreSale > 0);
-    require(_capSale > 0);
+    require(_capBatch1 > 0);
+    require(_capBatch2 > 0);
 
-    uint256 sumCaps = _capPreSale;
-    sumCaps = sumCaps.add(capSale);
+    uint256 sumCaps = _capBatch1;
+    sumCaps = sumCaps.add(capBatch2);
     require(_goal < sumCaps);
 
     require(_wallet != address(0));
@@ -112,16 +118,16 @@ contract HivePowerCrowdsale is Ownable {
     // Initialize variables
     token = createTokenContract();
 
-    startTimePreSale = _startTimePreSale;
-    endTimePreSale = _endTimePreSale;
-    startTimeSale = _startTimeSale;
-    endTimeSale = _endTimeSale;
+    startTimeBatch1 = _startTimeBatch1;
+    endTimeBatch1 = _endTimeBatch1;
+    startTimeBatch2 = _startTimeBatch2;
+    endTimeBatch2 = _endTimeBatch2;
 
-    ratePreSale = _ratePreSale;
-    rateSale = _rateSale;
+    rateBatch1 = _rateBatch1;
+    rateBatch2 = _rateBatch2;
 
-    capPreSale = _capPreSale;
-    capSale = _capSale;
+    capBatch1 = _capBatch1;
+    capBatch2 = _capBatch2;
 
     additionalTokens = _additionalTokens;
 
@@ -132,7 +138,7 @@ contract HivePowerCrowdsale is Ownable {
 
     wallet = _wallet;
 
-    vault = new RefundVault(wallet);
+    vault = new RefundVault(_wallet);
   }
 
   // fallback function can be used to buy tokens
@@ -149,12 +155,12 @@ contract HivePowerCrowdsale is Ownable {
     uint256 weiAmount = msg.value;
     uint256 tokens;
 
-    // PreSale phase
-    if(isPreSaleRunning())
+    // Batch1 phase running
+    if(isBatch1Running())
     {
       // calculate token amount to be created and update state
-      tokens = getTokenAmount(weiAmount, ratePreSale);
-      weiRaisedPreSale = weiRaisedPreSale.add(weiAmount);
+      tokens = getTokenAmount(weiAmount, rateBatch1);
+      weiRaisedBatch1 = weiRaisedBatch1.add(weiAmount);
       weiRaised = weiRaised.add(weiAmount);
 
       // mint tokens and transfer funds
@@ -163,12 +169,12 @@ contract HivePowerCrowdsale is Ownable {
       forwardFunds();
     }
 
-    // Sale phase
-    if(isSaleRunning())
+    // Batch2 phase running
+    if(isBatch2Running())
     {
       // calculate token amount to be created and update state
-      tokens = getTokenAmount(weiAmount, rateSale);
-      weiRaisedSale = weiRaisedSale.add(weiAmount);
+      tokens = getTokenAmount(weiAmount, rateBatch2);
+      weiRaisedBatch2 = weiRaisedBatch2.add(weiAmount);
       weiRaised = weiRaised.add(weiAmount);
 
       // mint tokens and transfer funds
@@ -178,43 +184,43 @@ contract HivePowerCrowdsale is Ownable {
     }
   }
 
-  // @return true if crowdsale is in the init phase (before PreSale)
+  // @return true if crowdsale is in the init phase (before Batch1)
   function isInit() public view returns (bool) {
-    return now < startTimePreSale;
+    return now < startTimeBatch1;
   }
 
-  // @return true if crowdsale is running the PreSale phase
-  function isPreSaleRunning() public view returns (bool) {
-    return now >= startTimePreSale && now <= endTimePreSale && weiRaisedPreSale < capPreSale;
+  // @return true if crowdsale is running the Batch1 phase
+  function isBatch1Running() public view returns (bool) {
+    return now >= startTimeBatch1 && now <= endTimeBatch1 && weiRaisedBatch1 < capBatch1;
   }
 
-  // @return true if crowdsale is the between PreSale and Sale phases
-  function isBetweenPreSaleAndSale() public view returns (bool) {
-    bool reachedPreSaleCap = now >= startTimePreSale && now <= endTimePreSale && weiRaisedPreSale >= capPreSale;
-    bool withinBetweenPeriod = now > endTimePreSale && now < startTimeSale;
-    return withinBetweenPeriod || reachedPreSaleCap;
+  // @return true if crowdsale is the between Batch1 and Batch2 phases
+  function isBetweenBatch1AndBatch2() public view returns (bool) {
+    bool reachedBatch1Cap = now >= startTimeBatch1 && now <= endTimeBatch1 && weiRaisedBatch1 >= capBatch1;
+    bool withinBetweenPeriod = now > endTimeBatch1 && now < startTimeBatch2;
+    return withinBetweenPeriod || reachedBatch1Cap;
   }
 
-  // @return true if crowdsale is running the Sale phase
-  function isSaleRunning() public view returns (bool) {
-    return now >= startTimeSale && now <= endTimeSale && weiRaisedSale < capSale;
+  // @return true if crowdsale is running the Batch2 phase
+  function isBatch2Running() public view returns (bool) {
+    return now >= startTimeBatch2 && now <= endTimeBatch2 && weiRaisedBatch2 < capBatch2;
   }
 
-  // @return true if the PreSale phase cap is reached
-  function isPreSaleCapReached() public view returns (bool) {
-    return weiRaisedPreSale == capPreSale;
+  // @return true if the Batch1 phase cap is reached
+  function isBatch1CapReached() public view returns (bool) {
+    return weiRaisedBatch1 == capBatch1;
   }
 
-  // @return true if the Sale phase cap is reached
-  function isSaleCapReached() public view returns (bool) {
-    return weiRaisedSale == capSale;
+  // @return true if the Batch2 phase cap is reached
+  function isBatch2CapReached() public view returns (bool) {
+    return weiRaisedBatch2 == capBatch2;
   }
 
-  // @return true if crowdsale (presale + sale) event has ended (i.e. the second phase has ended)
+  // @return true if the crowdsale event (Batch1 + Batch2) has ended (i.e. the second phase Batch2 has ended)
   function hasEnded() public view returns (bool) {
-    bool reachedSaleCap = weiRaisedSale >= capSale;
-    bool withinPeriod = now > endTimeSale;
-    return reachedSaleCap || withinPeriod;
+    bool reachedBatch2Cap = weiRaisedBatch2 >= capBatch2;
+    bool withinPeriod = now > endTimeBatch2;
+    return reachedBatch2Cap || withinPeriod;
   }
 
   // @return HVT (Mintable Token) token instance
@@ -229,10 +235,15 @@ contract HivePowerCrowdsale is Ownable {
 
   // @return true if the transaction can buy tokens
   function validPurchase() internal view returns (bool) {
-    bool withinPeriodPreSale = now >= startTimePreSale && now <= endTimePreSale && weiRaisedPreSale.add(msg.value) <= capPreSale;
-    bool withinPeriodSale = now >= startTimeSale && now <= endTimeSale && weiRaisedSale.add(msg.value) <= capSale;
-    bool withinPeriod = withinPeriodPreSale || withinPeriodSale;
+    // Batch1 phase check
+    bool withinPeriodBatch1 = now >= startTimeBatch1 && now <= endTimeBatch1 && weiRaisedBatch1.add(msg.value) <= capBatch1;
+    // Batch2 phase check
+    bool withinPeriodBatch2 = now >= startTimeBatch2 && now <= endTimeBatch2 && weiRaisedBatch2.add(msg.value) <= capBatch2;
+
+    bool withinPeriod = withinPeriodBatch1 || withinPeriodBatch2;
+
     bool nonZeroPurchase = msg.value != 0;
+
     return withinPeriod && nonZeroPurchase;
   }
 
@@ -240,7 +251,7 @@ contract HivePowerCrowdsale is Ownable {
    * @dev finalize an ICO in dependency of the goal reaching:
    * 1) reached goal (successful ICO):
    * -> mint additional tokens (i.e. for airdrops, referrals, founders, etc.) and assign them to the owner
-   * -> release sold token for the transfers
+   * -> release sold tokens for the transfers
    * -> close the vault
    * -> close the ICO successfully
    * 2) not reached goal (not successful ICO):
@@ -253,7 +264,7 @@ contract HivePowerCrowdsale is Ownable {
 
     // Check the goal reaching
     if(weiRaised >= goal) {
-      // Mint additional tokens (referral, airdrops, etc.)
+      // Mint additional tokens (referral, airdrops, etc.) and assign them to the owner
       if(additionalTokens > 0) {
         token.mint(owner, additionalTokens);
         token.finishMinting();
@@ -278,7 +289,7 @@ contract HivePowerCrowdsale is Ownable {
 
   /**
    * @dev finalize an unsuccessful ICO:
-   * -> enable the refund
+   * -> enable the refunds
    * -> close the ICO not successfully
    */
    function finalizeNOK() onlyOwner public {
@@ -314,21 +325,21 @@ contract HivePowerCrowdsale is Ownable {
 
    // false if the ico is not started, true if the ico is started and running, true if the ico is completed
   function started() public view returns(bool) {
-    return isPreSaleRunning() || isSaleRunning();
+    return isBatch1Running() || isBatch2Running();
   }
 
   // false if the ico is not started, true if the ico is started and running, true if the ico is completed
   function endend() public view returns(bool) {
-    return isBetweenPreSaleAndSale() || hasEnded();
+    return isBetweenBatch1AndBatch2() || hasEnded();
   }
 
   // time stamp of the starting time of the ico, must return 0 if it depends on the block number
   function startTime() public view returns(uint256) {
-    if(isPreSaleRunning()) {
-      return startTimePreSale;
+    if(isBatch1Running()) {
+      return startTimeBatch1;
     }
-    else if(isSaleRunning()) {
-      return startTimePreSale;
+    else if(isBatch2Running()) {
+      return startTimeBatch1;
     }
     else {
       return 0;
@@ -337,25 +348,25 @@ contract HivePowerCrowdsale is Ownable {
 
   // time stamp of the ending time of the ico, must retrun 0 if it depends on the block number
   function endTime() public view returns(uint) {
-    if(isPreSaleRunning()) {
-      return endTimeSale;
+    if(isBatch1Running()) {
+      return endTimeBatch2;
     }
-    else if(isSaleRunning()) {
-      return endTimeSale;
+    else if(isBatch2Running()) {
+      return endTimeBatch2;
     }
     else {
       return 0;
     }
   }
 
-  // returns the total number of the tokens available for the sale, must not change when the ico is started
+  // returns the total number of the tokens available for the crowdsale, must not change when the ico is started
   function totalTokens() public view returns(uint) {
-    if(isPreSaleRunning()) {
-      return getTokenAmount(capPreSale, ratePreSale);
+    if(isBatch1Running()) {
+      return getTokenAmount(capBatch1, rateBatch1);
     }
-    else if(isSaleRunning()) {
-      uint256 totalCapTokens = getTokenAmount(capPreSale, ratePreSale);
-      return totalCapTokens.add(getTokenAmount(capSale, rateSale));
+    else if(isBatch2Running()) {
+      uint256 totalCapTokens = getTokenAmount(capBatch1, rateBatch1);
+      return totalCapTokens.add(getTokenAmount(capBatch2, rateBatch2));
     }
     else {
       return 0;
@@ -366,18 +377,7 @@ contract HivePowerCrowdsale is Ownable {
   // then it will decrease. It is used to calculate the percentage of sold tokens as remainingTokens() / totalTokens()
   function remainingTokens() public view returns(uint) {
     uint256 totTokens = totalTokens();
-    uint256 raisedTokens;
-    if(isPreSaleRunning()) {
-      raisedTokens = getTokenAmount(weiRaisedPreSale, ratePreSale);
-      return totTokens.sub(getTokenAmount(weiRaisedPreSale, ratePreSale));
-    }
-    else if(isSaleRunning()) {
-      raisedTokens = getTokenAmount(weiRaisedPreSale, ratePreSale);
-      raisedTokens = raisedTokens.add(getTokenAmount(weiRaisedSale, rateSale));
-      return totTokens.sub(getTokenAmount(capSale, rateSale));
-    }
-    else {
-      return 0;
-    }
+    uint256 raisedTokens = token.totalSupply();
+    return totTokens.sub(raisedTokens);
   }
 }
