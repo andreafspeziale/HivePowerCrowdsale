@@ -70,6 +70,7 @@ contract HivePowerCrowdsale is Ownable {
 
   // step for the token releasing (ex. every 6 months a slot is released, starting from crowdsale end)
   uint256 public stepLockedToken;
+  bool public isLockedTokenDistributed = false;
 
   /**
    * event for token purchase logging
@@ -177,6 +178,7 @@ contract HivePowerCrowdsale is Ownable {
 
     // delay in secs for the release of founders tokens
     stepLockedToken = _stepLockedToken;
+    isLockedTokenDistributed = false;
 
     // variables related to ICO finalization
     isFinalizedOK = false;
@@ -191,10 +193,10 @@ contract HivePowerCrowdsale is Ownable {
    * - Slot n. 4 => 0.25 tokens released for founders since endTimeBatch2 + stepLockedToken*4 => 24 month after ICO ends
    */
   function createTokenTimeLocks() onlyOwner public {
-    require(stepLockedToken > 0);
+    require(!isLockedTokenDistributed);
 
     uint256 releaseTime = endTimeBatch2;
-    for(uint256 i=0; i<4; i++)
+    for(uint256 i=0; i < 4; i++)
     {
       // update releaseTime according to the step
       releaseTime = releaseTime.add(stepLockedToken);
@@ -204,8 +206,7 @@ contract HivePowerCrowdsale is Ownable {
       token.mint(address(timeLocks[i]), foundersTokens.div(4));
     }
     // Set stepLockedToken to 0 to avoid further timelocks creations
-    stepLockedToken = 0;
-
+    isLockedTokenDistributed  = true;
     CreatedTokenTimeLocks();
   }
 
@@ -331,7 +332,7 @@ contract HivePowerCrowdsale is Ownable {
       token.mint(owner, additionalTokens);
       token.finishMinting();
       MintedAdditionalTokens(owner, additionalTokens);
-      
+
       // Enabling token transfers
       token.enableTokenTransfers();
 
