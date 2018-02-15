@@ -157,17 +157,13 @@ contract HivePowerCrowdsale is Ownable {
   }
 
   function createTokenTimeLocks() onlyOwner internal {
-    uint256 releaseTime = 0;
-    uint256 delay = 0;
+    uint256 releaseTime = endTimeBatch2;
     for(uint256 i=0; i<4; i++)
     {
-      releaseTime = releaseTime.add(endTimeBatch2);
-      delay = stepReleaseLockedToken.mul(i.add(1));
-      releaseTime = releaseTime.add(delay);
-
-      // timeLocks[i] = new TokenTimelock(HVT(token), wallet, endTimeBatch2 + stepReleaseLockedToken * (i+1));
+      releaseTime = releaseTime.add(stepReleaseLockedToken);
+      // create tokentimelock
       timeLocks[i] = new TokenTimelock(HVT(token), wallet, releaseTime);
-
+      // mint tokens in tokentimelock
       token.mint(address(timeLocks[i]), foundersTokens.div(4));
     }
   }

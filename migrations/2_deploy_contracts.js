@@ -28,11 +28,8 @@ module.exports = function(deployer, network, accounts) {
     var wallet = accounts[0];
 
     // Founders tokens
-    var foundersTokens = 5 * 1e18;
-    var releaseTimeTokenLock1 = startTimeBatch2 + (60 * 1);
-    var releaseTimeTokenLock2 = startTimeBatch2 + (60 * 2);
-    var releaseTimeTokenLock3 = startTimeBatch2 + (60 * 2);
-    var releaseTimeTokenLock4 = startTimeBatch2 + (60 * 4);
+    var foundersTokens = 6 * 1e18;
+    var stepReleaseLockedToken = 60;                   // First release after 1 hour, second after 2, etc..
 
     // Additional tokens
     var additionalTokens = 4 * 1e18;
