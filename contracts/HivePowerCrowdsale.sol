@@ -5,6 +5,7 @@ import 'zeppelin-solidity/contracts/ownership/Ownable.sol';
 import 'zeppelin-solidity/contracts/crowdsale/RefundVault.sol';
 import 'zeppelin-solidity/contracts/token/ERC20/TokenTimelock.sol';
 import './HVT.sol';
+
 /*import './ICOEngineInterface.sol';*/
 /*import './KYCBase.sol';*/
 
@@ -17,7 +18,7 @@ import './HVT.sol';
  * Funds collected are forwarded to a vault as they arrive.
  * If the ICO will be successful then the total fund is sent to a wallet, otherwise all will be refunded
  */
-/*contract HivePowerCrowdBatch2 is Ownable, ICOEngineInterface, KYCBase {*/
+/*contract HivePowerCrowdsale is Ownable, ICOEngineInterface, KYCBase {*/
 contract HivePowerCrowdsale is Ownable {
   using SafeMath for uint256;
 
@@ -48,10 +49,7 @@ contract HivePowerCrowdsale is Ownable {
   uint256 public capBatch1;
   uint256 public capBatch2;
 
-  // tokens assigned to the founders and timelocked
-  uint256 public foundersTokens;
-
-  // additional tokens (i.e. for private Batch2s, airdrops, referrals, etc.)
+  // additional tokens (i.e. for private sales, airdrops, referrals, etc.)
   uint256 public additionalTokens;
 
   // is the ICO successfully(not) finalized
@@ -64,11 +62,14 @@ contract HivePowerCrowdsale is Ownable {
   // minimum amount of funds to be raised in weis
   uint256 public goal;
 
+  // tokens assigned to the founders and timelocked
+  uint256 public foundersTokens;
+
   // timelocks for founders token
   TokenTimelock [4] public timeLocks;
 
   // step for the token releasing (ex. every 6 months a slot is released, starting from crowdsale end)
-  uint256 stepReleaseLockedToken;
+  uint256 public stepLockedToken;
 
   /**
    * event for token purchase logging
@@ -79,93 +80,133 @@ contract HivePowerCrowdsale is Ownable {
    */
   event TokenPurchase(address indexed purchaser, address indexed beneficiary, uint256 value, uint256 amount);
 
-  /* ICO successfully finalized */
+  /* event for ICO successfully finalized */
   event FinalizedOK();
 
-  /* ICO not successfully finalized */
+  /* event for ICO not successfully finalized */
   event FinalizedNOK();
+
+  /* eventofor the creation of timelocks related to founders tokens */
+  event CreatedTokenTimeLocks();
 
   /**
    * event for additional token minting
+   * @param to who got the tokens
+   * @param amount amount of tokens purchased
    */
   event MintedAdditionalTokens(address indexed to, uint256 amount);
 
-  function HivePowerCrowdSale(uint256 _startTimeBatch1,
-                              uint256 _endTimeBatch1,
-                              uint256 _startTimeBatch2,
-                              uint256 _endTimeBatch2,
-                              uint256 _rateBatch1,
-                              uint256 _rateBatch2,
-                              uint256 _capBatch1,
-                              uint256 _capBatch2,
-                              uint256 _foundersTokens,
-                              uint256 _stepReleaseLockedToken,
-                              uint256 _additionalTokens,
-                              uint256 _goal,
-                              address _wallet)
+  function HivePowerCrowdsale(uint256 _startTimeBatch1,       // start time of Batch1 phase
+                              uint256 _endTimeBatch1,         // end time of Batch1 phase
+                              uint256 _startTimeBatch2,       // start time of Batch2 phase
+                              uint256 _endTimeBatch2,         // end time of Batch2 phase
+                              uint256 _rateBatch1,            // rate of Batch1 phase
+                              uint256 _rateBatch2,            // rate of Batch2 phase
+                              uint256 _capBatch1,             // cap of Batch1 phase
+                              uint256 _capBatch2,             // cap of Batch2 phase
+                              uint256 _foundersTokens,        // founders tokens
+                              uint256 _stepLockedToken,       // step for token timelock
+                              uint256 _additionalTokens,      // additional tokens
+                              uint256 _goal,                  // minimum goal to reach
+                              address _wallet)                // wallet of the deployer
                               public {
-    // Check input arguments
+    // initial checkings
+
+    // timestamps checkings
     require(_startTimeBatch1 >= now);
     require(_endTimeBatch1 >= _startTimeBatch1);
     require(_startTimeBatch2 >= _endTimeBatch1);
     require(_endTimeBatch2 >= _startTimeBatch2);
 
+    // rates must be >0
     require(_rateBatch1 > 0);
     require(_rateBatch2 > 0);
 
+    // caps must be >0
     require(_capBatch1 > 0);
     require(_capBatch2 > 0);
 
+    // goal must be smaller than the caps sum
     uint256 sumCaps = _capBatch1;
-    sumCaps = sumCaps.add(capBatch2);
+    sumCaps = sumCaps.add(_capBatch2);
     require(_goal < sumCaps);
 
+    // wallet cannot be 0
     require(_wallet != address(0));
+
+    // tokens for founders must be >0
+    require(_foundersTokens > 0);
+
+    // the timelocks for the founders tokens must have a duration
+    require(_stepLockedToken > 0);
+
+    // additional tokens must be >0
+    require(_additionalTokens > 0);
 
     // Initialize variables
     token = createTokenContract();
 
+    // periods
     startTimeBatch1 = _startTimeBatch1;
     endTimeBatch1 = _endTimeBatch1;
     startTimeBatch2 = _startTimeBatch2;
     endTimeBatch2 = _endTimeBatch2;
 
+    // rates
     rateBatch1 = _rateBatch1;
     rateBatch2 = _rateBatch2;
 
+    // caps
     capBatch1 = _capBatch1;
     capBatch2 = _capBatch2;
 
+    // additional tokens (referrals, airdrops, etc.)
     additionalTokens = _additionalTokens;
 
+    // minimum goal to reach
     goal = _goal;
 
-    isFinalizedOK = false;
-    isFinalizedNOK = false;
-
+    // wallet
     wallet = _wallet;
 
-    // vault definition for handling of an eventual refunding
-    vault = new RefundVault(_wallet);
+    // vault for eventual refunding
+    vault = new RefundVault(wallet);
 
-    // founders tokens handling
+    // founders tokens
     foundersTokens = _foundersTokens;
 
-    // create timelocks for tokens starting from the crowdsale end
-    stepReleaseLockedToken = _stepReleaseLockedToken;
-    createTokenTimeLocks();
+    // delay in secs for the release of founders tokens
+    stepLockedToken = _stepLockedToken;
+
+    // variables related to ICO finalization
+    isFinalizedOK = false;
+    isFinalizedNOK = false;
   }
 
-  function createTokenTimeLocks() onlyOwner internal {
+  /**
+   * create token time locks (in the ICO stepReleaseLockedToken = 6 months)
+   * - Slot n. 1 => 0.25 tokens released for founders since endTimeBatch2 + stepLockedToken*1 =>  6 month after ICO ends
+   * - Slot n. 2 => 0.25 tokens released for founders since endTimeBatch2 + stepLockedToken*2 => 12 month after ICO ends
+   * - Slot n. 3 => 0.25 tokens released for founders since endTimeBatch2 + stepLockedToken*3 => 18 month after ICO ends
+   * - Slot n. 4 => 0.25 tokens released for founders since endTimeBatch2 + stepLockedToken*4 => 24 month after ICO ends
+   */
+  function createTokenTimeLocks() onlyOwner public {
+    require(stepLockedToken > 0);
+
     uint256 releaseTime = endTimeBatch2;
     for(uint256 i=0; i<4; i++)
     {
-      releaseTime = releaseTime.add(stepReleaseLockedToken);
+      // update releaseTime according to the step
+      releaseTime = releaseTime.add(stepLockedToken);
       // create tokentimelock
       timeLocks[i] = new TokenTimelock(HVT(token), wallet, releaseTime);
       // mint tokens in tokentimelock
       token.mint(address(timeLocks[i]), foundersTokens.div(4));
     }
+    // Set stepLockedToken to 0 to avoid further timelocks creations
+    stepLockedToken = 0;
+
+    CreatedTokenTimeLocks();
   }
 
   // fallback function can be used to buy tokens
@@ -243,7 +284,7 @@ contract HivePowerCrowdsale is Ownable {
     return weiRaisedBatch2 == capBatch2;
   }
 
-  // @return true if the crowdsale event (Batch1 + Batch2) has ended (i.e. the second phase Batch2 has ended)
+  // @return true if crowdsale (presale + sale) event has ended (i.e. the second phase has ended)
   function hasEnded() public view returns (bool) {
     bool reachedBatch2Cap = weiRaisedBatch2 >= capBatch2;
     bool withinPeriod = now > endTimeBatch2;
@@ -262,23 +303,18 @@ contract HivePowerCrowdsale is Ownable {
 
   // @return true if the transaction can buy tokens
   function validPurchase() internal view returns (bool) {
-    // Batch1 phase check
     bool withinPeriodBatch1 = now >= startTimeBatch1 && now <= endTimeBatch1 && weiRaisedBatch1.add(msg.value) <= capBatch1;
-    // Batch2 phase check
     bool withinPeriodBatch2 = now >= startTimeBatch2 && now <= endTimeBatch2 && weiRaisedBatch2.add(msg.value) <= capBatch2;
-
     bool withinPeriod = withinPeriodBatch1 || withinPeriodBatch2;
-
     bool nonZeroPurchase = msg.value != 0;
-
     return withinPeriod && nonZeroPurchase;
   }
 
   /**
-   * @dev finalize an ICO in dependency of the goal reaching:
+   * @dev finalize an ICO in dependency on the goal reaching:
    * 1) reached goal (successful ICO):
    * -> mint additional tokens (i.e. for airdrops, referrals, founders, etc.) and assign them to the owner
-   * -> release sold tokens for the transfers
+   * -> release sold token for the transfers
    * -> close the vault
    * -> close the ICO successfully
    * 2) not reached goal (not successful ICO):
@@ -291,13 +327,11 @@ contract HivePowerCrowdsale is Ownable {
 
     // Check the goal reaching
     if(weiRaised >= goal) {
-      // Mint additional tokens (referral, airdrops, etc.) and assign them to the owner
-      if(additionalTokens > 0) {
-        token.mint(owner, additionalTokens);
-        token.finishMinting();
-        MintedAdditionalTokens(owner, additionalTokens);
-      }
-
+      // Mint additional tokens (referral, airdrops, etc.)
+      token.mint(owner, additionalTokens);
+      token.finishMinting();
+      MintedAdditionalTokens(owner, additionalTokens);
+      
       // Enabling token transfers
       token.enableTokenTransfers();
 
@@ -316,7 +350,7 @@ contract HivePowerCrowdsale is Ownable {
 
   /**
    * @dev finalize an unsuccessful ICO:
-   * -> enable the refunds
+   * -> enable the refund
    * -> close the ICO not successfully
    */
    function finalizeNOK() onlyOwner public {
@@ -366,7 +400,7 @@ contract HivePowerCrowdsale is Ownable {
       return startTimeBatch1;
     }
     else if(isBatch2Running()) {
-      return startTimeBatch1;
+      return startTimeBatch2;
     }
     else {
       return 0;
@@ -376,7 +410,7 @@ contract HivePowerCrowdsale is Ownable {
   // time stamp of the ending time of the ico, must retrun 0 if it depends on the block number
   function endTime() public view returns(uint) {
     if(isBatch1Running()) {
-      return endTimeBatch2;
+      return endTimeBatch1;
     }
     else if(isBatch2Running()) {
       return endTimeBatch2;
@@ -386,14 +420,15 @@ contract HivePowerCrowdsale is Ownable {
     }
   }
 
-  // returns the total number of the tokens available for the crowdsale, must not change when the ico is started
+  // returns the total number of the tokens available for the sale, must not change when the ico is started
   function totalTokens() public view returns(uint) {
     if(isBatch1Running()) {
       return getTokenAmount(capBatch1, rateBatch1);
     }
     else if(isBatch2Running()) {
-      uint256 totalCapTokens = getTokenAmount(capBatch1, rateBatch1);
-      return totalCapTokens.add(getTokenAmount(capBatch2, rateBatch2));
+      uint256 totalCapTokensBatch1 = getTokenAmount(capBatch1, rateBatch1);
+      uint256 totalCapTokensBatch2 = getTokenAmount(capBatch2, rateBatch2);
+      return totalCapTokensBatch1.add(totalCapTokensBatch2);
     }
     else {
       return 0;

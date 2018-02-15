@@ -29,7 +29,7 @@ module.exports = function(deployer, network, accounts) {
 
     // Founders tokens
     var foundersTokens = 6 * 1e18;
-    var stepReleaseLockedToken = 60;                   // First release after 1 hour, second after 2, etc..
+    var stepLockedToken = (60 * 1);                   // First release after stepReleaseLockedToken seconds, second after 2*stepReleaseLockedToken, etc..
 
     // Additional tokens
     var additionalTokens = 4 * 1e18;
@@ -40,7 +40,7 @@ module.exports = function(deployer, network, accounts) {
   else if (network == 'ropsten')
   {
     // Batch1 phase
-    var startTimeBatch1 = 1518588000;                           // 14-02-2018 06:00 (UTC)
+    var startTimeBatch1 = 1518760800;                           // 16-02-2018 06:00 (UTC)
     var endTimeBatch1 = startTimeBatch1 + (3600 * 2);           // Batch1 end
     var rateBatch1 = parseInt(0.00025 * 1e18 / (1 - 0.3));      // Token = wei * rate
     var capBatch1 = 3500 * 1e18;                                // Maximum cap (wei) (1e18 = 1000000000000000000)
@@ -56,7 +56,7 @@ module.exports = function(deployer, network, accounts) {
 
     // Founders tokens
     var foundersTokens = 60000000;
-    var stepReleaseLockedToken = (3600 * 1);                   // First release after 1 hour, second after 2, etc..
+    var stepLockedToken = (3600 * 1);                   // First release after stepReleaseLockedToken seconds, second after 2*stepReleaseLockedToken, etc..
 
     // Additional tokens
     var additionalTokens = 50000000;
@@ -77,7 +77,7 @@ module.exports = function(deployer, network, accounts) {
                   capBatch1,
                   capBatch2,
                   foundersTokens,
-                  stepReleaseLockedToken,
+                  stepLockedToken,
                   additionalTokens,
                   goal,
                   wallet);

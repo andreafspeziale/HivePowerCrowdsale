@@ -13,7 +13,7 @@ contract HVT is MintableToken {
 
   bool public enableTransfers = false;
 
-  // Overrides:
+  // overrides to maintain the token locked during the ICO
   function transfer(address _to, uint256 _value) public returns(bool) {
     require(enableTransfers);
     return super.transfer(_to,_value);
@@ -29,7 +29,7 @@ contract HVT is MintableToken {
     return super.approve(_spender,_value);
   }
 
-  // enable token transfer
+  // enable token transfers
   function enableTokenTransfers() public onlyOwner {
     enableTransfers = true;
   }
