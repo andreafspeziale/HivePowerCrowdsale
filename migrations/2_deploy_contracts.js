@@ -14,13 +14,13 @@ module.exports = function(deployer, network, accounts) {
     var initialDelay = web3.eth.getBlock(web3.eth.blockNumber).timestamp + (60 * 1);
     // Batch1 phase
     var startTimeBatch1 = initialDelay;                      // Batch1 starting 1 minute after the initial deployment
-    var endTimeBatch1 = startTimeBatch1 + (60 * 1);         // Batch1 duration
+    var endTimeBatch1 = startTimeBatch1 + (60 * 1);         // Batch1 end
     var rateBatch1 = 4;                                      // Token = wei * rate (1 HVT = 4 ETH)
     var capBatch1 = 5 * 1e18;                                // Maximum cap (wei) (1e18 = 1000000000000000000)
 
     // Batch2 phase
     var startTimeBatch2 = endTimeBatch1 + (60 * 1);            // Batch2 waits some minutes before starting
-    var endTimeBatch2 = startTimeBatch2 + (60 * 1);               // Batch2 duration
+    var endTimeBatch2 = startTimeBatch2 + (60 * 1);               // Batch2 end
     var rateBatch2 = 1;                                         // Token = wei * rate (1 HVT = 1 ETH)
     var capBatch2 = 20 * 1e18;                                  // Maximum cap (wei) (1e18 = 1000000000000000000)
 
@@ -29,6 +29,10 @@ module.exports = function(deployer, network, accounts) {
 
     // Founders tokens
     var foundersTokens = 5 * 1e18;
+    var releaseTimeTokenLock1 = startTimeBatch2 + (60 * 1);
+    var releaseTimeTokenLock2 = startTimeBatch2 + (60 * 2);
+    var releaseTimeTokenLock3 = startTimeBatch2 + (60 * 2);
+    var releaseTimeTokenLock4 = startTimeBatch2 + (60 * 4);
 
     // Additional tokens
     var additionalTokens = 4 * 1e18;
@@ -40,13 +44,13 @@ module.exports = function(deployer, network, accounts) {
   {
     // Batch1 phase
     var startTimeBatch1 = 1518588000;                           // 14-02-2018 06:00 (UTC)
-    var endTimeBatch1 = 1518602400;                             // 14-02-2018 10:00 (UTC)
+    var endTimeBatch1 = startTimeBatch1 + (3600 * 2);           // Batch1 end
     var rateBatch1 = parseInt(0.00025 * 1e18 / (1 - 0.3));      // Token = wei * rate
     var capBatch1 = 3500 * 1e18;                                // Maximum cap (wei) (1e18 = 1000000000000000000)
 
     // Batch2 phase
-    var startTimeBatch2 = 1518609600;                           // 14-02-2018 12:00 (UTC)
-    var endTimeBatch2 = 1518620400;                             // 14-02-2018 17:00 (UTC)
+    var startTimeBatch2 = endTimeBatch1 + (3600 * 1);           // Batch2 waits some hours before starting
+    var endTimeBatch2 = startTimeBatch2 + (3600 * 2);           // Batch2 end
     var rateBatch2 = parseInt(0.00025 * 1e18 / (1 - 0.05));     // Token = wei * rate
     var capBatch2 = 7125 * 1e18;                                // Maximum cap (wei) (1e18 = 1000000000000000000)
 
@@ -55,6 +59,7 @@ module.exports = function(deployer, network, accounts) {
 
     // Founders tokens
     var foundersTokens = 60000000;
+    var stepReleaseLockedToken = (3600 * 1);                   // First release after 1 hour, second after 2, etc..
 
     // Additional tokens
     var additionalTokens = 50000000;
@@ -75,6 +80,7 @@ module.exports = function(deployer, network, accounts) {
                   capBatch1,
                   capBatch2,
                   foundersTokens,
+                  stepReleaseLockedToken,
                   additionalTokens,
                   goal,
                   wallet);

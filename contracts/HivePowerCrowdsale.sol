@@ -1,4 +1,4 @@
-pragma solidity 0.4.18;
+pragma solidity 0.4.19;
 
 import 'zeppelin-solidity/contracts/math/SafeMath.sol';
 import 'zeppelin-solidity/contracts/ownership/Ownable.sol';
@@ -64,6 +64,12 @@ contract HivePowerCrowdsale is Ownable {
   // minimum amount of funds to be raised in weis
   uint256 public goal;
 
+  // timelocks for founders token
+  TokenTimelock [4] public timeLocks;
+
+  // step for the token releasing (ex. every 6 months a slot is released, starting from crowdsale end)
+  uint256 stepReleaseLockedToken;
+
   /**
    * event for token purchase logging
    * @param purchaser who paid for the tokens
@@ -84,7 +90,7 @@ contract HivePowerCrowdsale is Ownable {
    */
   event MintedAdditionalTokens(address indexed to, uint256 amount);
 
-  function HivePowerCrowdBatch2(uint256 _startTimeBatch1,
+  function HivePowerCrowdSale(uint256 _startTimeBatch1,
                               uint256 _endTimeBatch1,
                               uint256 _startTimeBatch2,
                               uint256 _endTimeBatch2,
@@ -93,6 +99,7 @@ contract HivePowerCrowdsale is Ownable {
                               uint256 _capBatch1,
                               uint256 _capBatch2,
                               uint256 _foundersTokens,
+                              uint256 _stepReleaseLockedToken,
                               uint256 _additionalTokens,
                               uint256 _goal,
                               address _wallet)
@@ -138,7 +145,31 @@ contract HivePowerCrowdsale is Ownable {
 
     wallet = _wallet;
 
+    // vault definition for handling of an eventual refunding
     vault = new RefundVault(_wallet);
+
+    // founders tokens handling
+    foundersTokens = _foundersTokens;
+
+    // create timelocks for tokens starting from the crowdsale end
+    stepReleaseLockedToken = _stepReleaseLockedToken;
+    createTokenTimeLocks();
+  }
+
+  function createTokenTimeLocks() onlyOwner internal {
+    uint256 releaseTime = 0;
+    uint256 delay = 0;
+    for(uint256 i=0; i<4; i++)
+    {
+      releaseTime = releaseTime.add(endTimeBatch2);
+      delay = stepReleaseLockedToken.mul(i.add(1));
+      releaseTime = releaseTime.add(delay);
+
+      // timeLocks[i] = new TokenTimelock(HVT(token), wallet, endTimeBatch2 + stepReleaseLockedToken * (i+1));
+      timeLocks[i] = new TokenTimelock(HVT(token), wallet, releaseTime);
+
+      token.mint(address(timeLocks[i]), foundersTokens.div(4));
+    }
   }
 
   // fallback function can be used to buy tokens
