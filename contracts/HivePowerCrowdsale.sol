@@ -135,9 +135,9 @@ contract HivePowerCrowdsale is Ownable {
     // goal must be smaller than the caps sum in wei in the worst case which
     // means that both batch1 and batch2 reached their goal and all tokens sold
     // in batch2 were sold in the first week
-    uint256 sumCapsWei = _capBatch1.div(_rateBatch1);
+    /*uint256 sumCapsWei = _capBatch1.div(_rateBatch1);
     sumCapsWei = sumCapsWei.add(_capBatch2.div(_rateBatch2a));
-    require(_goal < sumCapsWei);
+    require(_goal < sumCapsWei);*/
 
     // wallet cannot be 0
     require(_wallet != address(0));
@@ -231,7 +231,7 @@ contract HivePowerCrowdsale is Ownable {
   function buyTokens(address beneficiary) public payable {
   /*function releaseTokensTo(address beneficiary) payable public returns(bool) {*/
     require(beneficiary != address(0));
-    require(validPurchase());
+    require(validBatch());
 
     uint256 weiAmount = msg.value;
     uint256 tokens;
@@ -242,7 +242,7 @@ contract HivePowerCrowdsale is Ownable {
       // calculate token amount to be created and update state
       tokens = getTokenAmount(weiAmount, rateBatch1);
       //check if tokens can be minted
-      require (tokenRaisedBatch1+tokens <= capBatch1);
+      require (tokenRaisedBatch1.add(tokens) <= capBatch1);
 
       weiRaised = weiRaised.add(weiAmount);
       tokenRaisedBatch1 = tokenRaisedBatch1.add(tokens);
@@ -267,7 +267,7 @@ contract HivePowerCrowdsale is Ownable {
         tokens = getTokenAmount(weiAmount, rateBatch2b);
       }
       //check if tokens can be minted
-      require (tokenRaisedBatch2+tokens <= capBatch2);
+      require (tokenRaisedBatch2.add(tokens) <= capBatch2);
 
       tokenRaisedBatch2 = tokenRaisedBatch2.add(tokens);
       weiRaised = weiRaised.add(weiAmount);
@@ -328,10 +328,10 @@ contract HivePowerCrowdsale is Ownable {
     return weiAmount.mul(rate);
   }
 
-  // @return true if the transaction can buy tokens
-  function validPurchase() internal view returns (bool) {
-    bool withinPeriodBatch1 = now >= startTimeBatch1 && now <= endTimeBatch1 && tokenRaisedBatch1.add(msg.value) <= capBatch1;
-    bool withinPeriodBatch2 = now >= startTimeBatch2 && now <= endTimeBatch2 && tokenRaisedBatch2.add(msg.value) <= capBatch2;
+  // @return true if the transaction is in the available batches
+  function validBatch() internal view returns (bool) {
+    bool withinPeriodBatch1 = now >= startTimeBatch1 && now <= endTimeBatch1;
+    bool withinPeriodBatch2 = now >= startTimeBatch2 && now <= endTimeBatch2;
     bool withinPeriod = withinPeriodBatch1 || withinPeriodBatch2;
     bool nonZeroPurchase = msg.value != 0;
     return withinPeriod && nonZeroPurchase;
