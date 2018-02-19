@@ -41,17 +41,18 @@ module.exports = function(deployer, network, accounts) {
   else if (network == 'ropsten')
   {
     // Batch1 phase
-    var startTimeBatch1 = 1518760800;                           // 16-02-2018 06:00 (UTC)
+    var initialDelay = web3.eth.getBlock(web3.eth.blockNumber).timestamp + (3600 * 1);
+    var startTimeBatch1 = initialDelay;                         // Batch1 starting 1 hour after the initial deployment
     var endTimeBatch1 = startTimeBatch1 + (3600 * 2);           // Batch1 end
     var rateBatch1 = parseInt(0.00025 * 1e18 * (1 + 0.3));      // Token = wei * rate
-    var capBatch1 = 10e6;                                // Maximum cap (token)
+    var capBatch1 = 10e6;                                       // Maximum cap (token)
 
     // Batch2 phase
     var startTimeBatch2 = endTimeBatch1 + (3600 * 1);           // Batch2 waits some hours before starting
     var endTimeBatch2 = startTimeBatch2 + (3600 * 2);           // Batch2 end
     var rateBatch2a = parseInt(0.00025 * 1e18 * (1 + 0.1));     // Token = wei * rate
-    var rateBatch2b = parseInt(0.00025 * 1e18);     // Token = wei * rate
-    var capBatch2 = 40e6;                                // Maximum cap (token)
+    var rateBatch2b = parseInt(0.00025 * 1e18);                 // Token = wei * rate
+    var capBatch2 = 40e6;                                       // Maximum cap (token)
 
     // Wallet
     var wallet = '0xa46a44c88c6bb62f41a723006a45506632f0c292';
