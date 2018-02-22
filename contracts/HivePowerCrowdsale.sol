@@ -119,14 +119,15 @@ contract HivePowerCrowdsale is Ownable {
 
     // timestamps checkings
     require(_startTimeBatch1 >= now);
-    require(_endTimeBatch1 >= _startTimeBatch1);
-    require(_startTimeBatch2 >= _endTimeBatch1);
-    require(_endTimeBatch2 >= _startTimeBatch2);
+    require(_endTimeBatch1 > _startTimeBatch1);
+    require(_startTimeBatch2 > _endTimeBatch1);
+    require(_endTimeBatch2 > _startTimeBatch2);
 
     // rates must be >0
     require(_rateBatch1 > 0);
     require(_rateBatch2a > 0);
     require(_rateBatch2b > 0);
+    require(_rateBatch2a > _rateBatch2b);
 
     // caps must be >0
     require(_capBatch1 > 0);
