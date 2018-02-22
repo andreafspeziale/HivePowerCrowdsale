@@ -78,19 +78,21 @@ require('chai')
 const HivePowerCrowdsale = artifacts.require('HivePowerCrowdsale');
 const HVT = artifacts.require('HVT');
 
+//  https://github.com/AdExBlockchain/adex-token/blob/master/contracts/ADXToken.sol
 contract('HivePowerCrowdsale', function ([_, investor, wallet, purchaser]) {
-  const RATE_BATCH1 =  5;         // 1 ETH = 1000 USD = 4000 HVT
-  const RATE_BATCH2A = 2;         // 1 ETH = 1000 USD = 4000 HVT
-  const RATE_BATCH2B = 1;         // 1 ETH = 1000 USD = 4000 HVT
-  const CAP_BATCH1 = 10e6;
-  const CAP_BATCH2 = 40e6;
-  const FOUNDERS_TOKENS = 10e6;
+  // HVT has 18 decimals => all is multiplied by 1e18
+  const RATE_BATCH1 =  4000 * 1e18;            // 1 ETH = 1000 USD = 4000 HVT => 1 HVT = 1/4000 ETH = 0.00025 ETH = 0.00025 * 1e18 wei
+  const RATE_BATCH2A = 4000 * 1e18;            // 1 ETH = 1000 USD = 4000 HVT => 1 HVT = 1/4000 ETH = 0.00025 ETH = 0.00025 * 1e18 wei
+  const RATE_BATCH2B = 4000 * 1e18;            // 1 ETH = 1000 USD = 4000 HVT => 1 HVT = 1/4000 ETH = 0.00025 ETH = 0.00025 * 1e18 wei
+  const CAP_BATCH1 = 10 * 1e6 * 1e18;
+  const CAP_BATCH2 = 40 * 1e6 * 1e18;
+  const FOUNDERS_TOKENS = 10 * 1e6 * 1e18;
   const STEP_LOCKED_TOKENS = 3600 * 1;
-  const ADDITIONAL_TOKENS = 40e6;
+  const ADDITIONAL_TOKENS = 40 * 1e6 * 1e18;
   const GOAL = ether(1000);
 
   // const value = ether(1);
-  const value = 1e6;
+  const value = 1e0;
 
   before(async function () {
     // Advance to the next block to correctly read time in the solidity "now" function interpreted by testrpc
@@ -186,6 +188,18 @@ contract('HivePowerCrowdsale', function ([_, investor, wallet, purchaser]) {
       status.should.be.all.equal(true);
       await this.crowdsale.send(value).should.be.fulfilled;
       await this.crowdsale.buyTokens(investor, { from: purchaser, value: value }).should.be.fulfilled;
+
+      // const wei = await this.crowdsale.weiRaised();
+      // console.log('wei = ' + wei.toNumber().toExponential());
+      //
+      // const tokensB1 = await this.crowdsale.tokenRaisedBatch1();
+      // console.log('TokenB1 = ' + tokensB1.toNumber().toExponential());
+      //
+      // const tknCapB1 = await this.token.MAX_BATCH1();
+      // console.log('TokenCapB1 = ' + tknCapB1.toNumber().toExponential());
+      //
+      // const tokens = await this.token.totalSupply();
+      // console.log('Token supply = ' + tokens.toNumber().toExponential());
     });
 
     it('should reject payments after end', async function () {
