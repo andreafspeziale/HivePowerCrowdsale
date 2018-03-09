@@ -12,25 +12,24 @@ module.exports = function(deployer, network, accounts) {
   if (network == 'development')
   {
     var initialDelay = web3.eth.getBlock(web3.eth.blockNumber).timestamp + (60 * 1);
-    // Batch1 phase
-    var startTimeBatch1 = initialDelay;                      // Batch1 starting 1 minute after the initial deployment
-    var endTimeBatch1 = startTimeBatch1 + (60 * 1);         // Batch1 end
-    var rateBatch1 = 4;                                      // Token = wei * rate (1 HVT = 4 ETH)
-    var capBatch1 = 5 * 1e18;                                // Maximum cap (wei) (1e18 = 1000000000000000000)
 
-    // Batch2 phase
-    var startTimeBatch2 = endTimeBatch1 + (60 * 1);            // Batch2 waits some minutes before starting
-    var endTimeBatch2 = startTimeBatch2 + (60 * 1);               // Batch2 end
-    var rateBatch2a = 2;                                         // Token = wei * rate (1 HVT = 1 ETH)
-    var rateBatch2b = 1;                                         // Token = wei * rate (1 HVT = 1 ETH)
-    var capBatch2 = 20 * 1e18;                                  // Maximum cap (wei) (1e18 = 1000000000000000000)
+    var startTime = initialDelay;                 // ICO starting 1 minute after the initial deployment
+    var endTime = startTime + (60 * 1);           // ICO end
+
+    var ratePhase1 = 4;                           // Token = rate * wei (1 ETH => 4 HVT)
+    var ratePhase2 = 2;                           // Token = rate * wei (1 ETH => 2 HVT)
+    var ratePhase3 = 1;                           // Token = wei * rate (1 ETH => 1 HVT)
+
+    var capPhase1 = 1 * 1e18;                     // Maximum cap (wei) (1e18 = 1000000000000000000)
+    var capPhase2 = 4 * 1e18;                     // Maximum cap (wei) (1e18 = 1000000000000000000)
+    var capPhase3 = 8 * 1e18;                     // Maximum cap (wei) (1e18 = 1000000000000000000)
 
     // Wallet
-    var wallet = accounts[0];
+    var wallet = accounts[1];
 
     // Founders tokens
     var foundersTokens = 10e6;
-    var stepLockedToken = (60 * 1);                   // First release after stepReleaseLockedToken seconds, second after 2*stepReleaseLockedToken, etc..
+    var stepLockedToken = (60 * 1);               // First release after stepReleaseLockedToken seconds, second after 2*stepReleaseLockedToken, etc..
 
     // Additional tokens
     var additionalTokens = 40e6;
@@ -40,26 +39,25 @@ module.exports = function(deployer, network, accounts) {
   }
   else if (network == 'ropsten')
   {
-    // Batch1 phase
     var initialDelay = web3.eth.getBlock(web3.eth.blockNumber).timestamp + (3600 * 1);
-    var startTimeBatch1 = initialDelay;                         // Batch1 starting 1 hour after the initial deployment
-    var endTimeBatch1 = startTimeBatch1 + (3600 * 2);           // Batch1 end
-    var rateBatch1 = parseInt(0.00025 * 1e18 * (1 + 0.3));      // Token = wei * rate
-    var capBatch1 = 10e6;                                       // Maximum cap (token)
 
-    // Batch2 phase
-    var startTimeBatch2 = endTimeBatch1 + (3600 * 1);           // Batch2 waits some hours before starting
-    var endTimeBatch2 = startTimeBatch2 + (3600 * 2);           // Batch2 end
-    var rateBatch2a = parseInt(0.00025 * 1e18 * (1 + 0.1));     // Token = wei * rate
-    var rateBatch2b = parseInt(0.00025 * 1e18);                 // Token = wei * rate
-    var capBatch2 = 40e6;                                       // Maximum cap (token)
+    var startTime = initialDelay;                               // ICO starting 1 hour after the initial deployment
+    var endTime = startTime + (3600 * 2);                       // ICO end
+
+    var ratePhase1 = parseInt(0.00025 * 1e18 * (1 + 0.3));      // Token = rate * wei
+    var ratePhase2 = parseInt(0.00025 * 1e18 * (1 + 0.1));      // Token = rate * wei
+    var ratePhase3 = parseInt(0.00025 * 1e18);                  // Token = rate * wei
+
+    var capPhase1 = 10e6;                                       // Maximum cap (token)
+    var capPhase2 = 15e6;                                       // Maximum cap (token)
+    var capPhase3 = 25e6;                                       // Maximum cap (token)
 
     // Wallet
-    var wallet = '0xa46a44c88c6bb62f41a723006a45506632f0c292';
+    var wallet = accounts[1];
 
     // Founders tokens
     var foundersTokens = 10e6;
-    var stepLockedToken = (3600 * 1);                   // First release after stepReleaseLockedToken seconds, second after 2*stepReleaseLockedToken, etc..
+    var stepLockedToken = (3600 * 1);                           // First release after stepReleaseLockedToken seconds, second after 2*stepReleaseLockedToken, etc..
 
     // Additional tokens
     var additionalTokens = 40e6;
@@ -70,16 +68,16 @@ module.exports = function(deployer, network, accounts) {
 
   deployer.deploy(SafeMath);
   deployer.link(SafeMath, HivePowerCrowdsale);
+  // deployer.deploy(HivePowerCrowdsale);
   deployer.deploy(HivePowerCrowdsale,
-                  startTimeBatch1,
-                  endTimeBatch1,
-                  startTimeBatch2,
-                  endTimeBatch2,
-                  rateBatch1,
-                  rateBatch2a,
-                  rateBatch2b,
-                  capBatch1,
-                  capBatch2,
+                  startTime,
+                  endTime,
+                  ratePhase1,
+                  ratePhase2,
+                  ratePhase3,
+                  capPhase1,
+                  capPhase2,
+                  capPhase3,
                   foundersTokens,
                   stepLockedToken,
                   additionalTokens,
