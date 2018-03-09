@@ -1,10 +1,11 @@
 pragma solidity 0.4.19;
 
 import 'zeppelin-solidity/contracts/token/ERC20/MintableToken.sol';
+import 'zeppelin-solidity/contracts/token/ERC20/BurnableToken.sol';
 import 'zeppelin-solidity/contracts/math/SafeMath.sol';
 import 'zeppelin-solidity/contracts/ownership/Ownable.sol';
 
-contract HVT is MintableToken {
+contract HVT is MintableToken, BurnableToken {
   using SafeMath for uint256;
 
   string public name = "HiVe Token";
@@ -13,7 +14,7 @@ contract HVT is MintableToken {
 
   bool public enableTransfers = false;
 
-  // overrides to maintain the token locked during the ICO
+  // functions overrides in order to maintain the token locked during the ICO
   function transfer(address _to, uint256 _value) public returns(bool) {
     require(enableTransfers);
     return super.transfer(_to,_value);
@@ -27,6 +28,11 @@ contract HVT is MintableToken {
   function approve(address _spender, uint256 _value) public returns (bool) {
     require(enableTransfers);
     return super.approve(_spender,_value);
+  }
+
+  function burn(uint256 _value) public {
+    require(enableTransfers);
+    super.burn(_value);
   }
 
   // enable token transfers
