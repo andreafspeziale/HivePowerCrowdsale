@@ -48,9 +48,9 @@ module.exports = function(deployer, network, accounts) {
 
     var startTime = initialDelay; // ICO starting 1 hour after the initial deployment
     var endTime = startTime + (3600 * 2); // ICO end
-    var ratePhase1 = parseInt(0.00025 * 1e18 * (1 + 0.3)); // Token = rate * wei
-    var ratePhase2 = parseInt(0.00025 * 1e18 * (1 + 0.1)); // Token = rate * wei
-    var ratePhase3 = parseInt(0.00025 * 1e18); // Token = rate * wei
+    var ratePhase1 = parseInt(4000 * (1 + 0.3)); // Token = rate * wei
+    var ratePhase2 = parseInt(4000 * (1 + 0.1)); // Token = rate * wei
+    var ratePhase3 = parseInt(4000); // Token = rate * wei
 
     var capPhase1 = 10e6; // Maximum cap (token)
     var capPhase2 = 25e6; // Maximum cap (token)

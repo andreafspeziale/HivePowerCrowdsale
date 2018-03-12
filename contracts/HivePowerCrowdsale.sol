@@ -8,7 +8,7 @@ import "./ICOEngineInterface.sol";
 import "./KYCBase.sol";
 import "./HVT.sol";
 
-// This is a basic ico example, do not use it in production.
+// The Hive Power crowdsale contract
 contract HivePowerCrowdsale is Ownable, ICOEngineInterface, KYCBase {
     using SafeMath for uint;
     enum State {Running,Success,Failure}
@@ -20,7 +20,7 @@ contract HivePowerCrowdsale is Ownable, ICOEngineInterface, KYCBase {
     address public wallet;
 
     // from ICOEngineInterface
-    uint [] public price;
+    uint [] public prices;
 
     // from ICOEngineInterface
     uint public startTime;
@@ -97,7 +97,7 @@ contract HivePowerCrowdsale is Ownable, ICOEngineInterface, KYCBase {
      *  approve() method from the _wallet account to the deployed contract address to assign
      *  the tokens to be sold by the ICO.
      */
-    function HivePowerCrowdsale(address [] kycSigner, address _token, address _wallet, uint _startTime, uint _endTime, uint [] _price, uint [] _caps, uint _goal, uint _companyTokens, uint _foundersTokens, uint _stepLockedToken)
+    function HivePowerCrowdsale(address [] kycSigner, address _token, address _wallet, uint _startTime, uint _endTime, uint [] _prices, uint [] _caps, uint _goal, uint _companyTokens, uint _foundersTokens, uint _stepLockedToken)
         public
         KYCBase(kycSigner)
     {
@@ -105,13 +105,13 @@ contract HivePowerCrowdsale is Ownable, ICOEngineInterface, KYCBase {
         require(_wallet != address(0));
         require(_startTime > now);
         require(_endTime > _startTime);
-        require(_price.length == _caps.length);
+        require(_prices.length == _caps.length);
 
         token = HVT(_token);
         wallet = _wallet;
         startTime = _startTime;
         endTime = _endTime;
-        price = _price;
+        prices = _prices;
         caps = _caps;
         totalTokens = _caps[_caps.length-1];
         remainingTokens = _caps[_caps.length-1];
@@ -247,10 +247,10 @@ contract HivePowerCrowdsale is Ownable, ICOEngineInterface, KYCBase {
       for (uint i=0;i<caps.length-1;i++){
         if (tokenRaised < caps[i])
         {
-          return(price[i]);
+          return(prices[i]);
         }
       }
-      return(price[price.length-1]);
+      return(prices[prices.length-1]);
     }
 
     // get the next cap as a function of the amount of sold token
@@ -260,7 +260,7 @@ contract HivePowerCrowdsale is Ownable, ICOEngineInterface, KYCBase {
         if (tokenRaised < caps[i])
         {
           // allow for a 5 ether overshoot (only when bonus is applied)
-          uint tokenPerFiveEther = (5 ether) / price[i];
+          uint tokenPerFiveEther = (5 ether) / prices[i];
           return(caps[i]+tokenPerFiveEther);
         }
       }
@@ -297,6 +297,11 @@ contract HivePowerCrowdsale is Ownable, ICOEngineInterface, KYCBase {
     // return the price as number of tokens released for each ether
     function price() public view returns(uint){
       return(getPrice());
+    }
+
+    // No payable fallback function, the tokens must be buyed using the functions buyTokens and buyTokensFor
+    function () public {
+        revert();
     }
 
 }
