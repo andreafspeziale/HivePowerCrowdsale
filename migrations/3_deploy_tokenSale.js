@@ -15,27 +15,32 @@ module.exports = function(deployer, network, accounts) {
     var wallet = accounts[1];
 
     var initialDelay = web3.eth.getBlock(web3.eth.blockNumber).timestamp + (60 * 1);
+    var startTime = initialDelay; // ICO starting 1 hour after the initial deployment
+    var endTime = startTime + (3600 * 2); // ICO end
+    var ratePhase1 = parseInt(4000 * (1 + 0.3)); // Token = rate * wei
+    var ratePhase2 = parseInt(4000 * (1 + 0.1)); // Token = rate * wei
+    var ratePhase3 = parseInt(4000); // Token = rate * wei
 
-    var startTime = initialDelay; // ICO starting 1 minute after the initial deployment
-    var endTime = startTime + (60 * 1); // ICO end
+    var capPhase1 = 10e6; // Maximum cap (token)
+    var capPhase2 = 25e6; // Maximum cap (token)
+    var capPhase3 = 50e6; // Maximum cap (token)
 
-    var ratePhase1 = 4; // Token = rate * wei (1 ETH => 4 HVT)
-    var ratePhase2 = 2; // Token = rate * wei (1 ETH => 2 HVT)
-    var ratePhase3 = 1; // Token = wei * rate (1 ETH => 1 HVT)
+    var etherPriceUSD = 1000000; //1 million dollars ;-)
 
-    var capPhase1 = 1 * 1e18; // Maximum cap (wei) (1e18 = 1000000000000000000)
-    var capPhase2 = 4 * 1e18; // Maximum cap (wei) (1e18 = 1000000000000000000)
-    var capPhase3 = 8 * 1e18; // Maximum cap (wei) (1e18 = 1000000000000000000)
+    var rate1 = parseInt((etherPriceUSD / 0.25) * 1.3);
+    var rate2 = parseInt((etherPriceUSD / 0.25) * 1.1);
+    var rate3 = parseInt((etherPriceUSD / 0.25) * 1.0);
 
-    // Founders tokens
-    var foundersTokens = 10e6;
-    var stepLockedToken = (3600 * 1); // First release after stepReleaseLockedToken seconds, second after 2*stepReleaseLockedToken, etc..
+    var cap1 = 10 * 1e6 * 1e18;
+    var cap2 = 25 * 1e6 * 1e18;
+    var cap3 = 50 * 1e6 * 1e18;
 
-    // Additional tokens
-    var additionalTokens = 40e6;
+    var foundersTokens = 10 * 1e6 * 1e18;
+    var stepLockedToken = 86400 * 30 * 6;
+    var additionalTokens = 40 * 1e6 * 1e18;
+    var goal = parseInt(1000000 / etherPriceUSD);
 
-    // Goal
-    var goal = 4 * 1e18;
+    var overshoot = web3.toWei(3, 'ether');
 
     //kyc signers
     var kycSigners = [accounts[2], accounts[3]];
@@ -56,20 +61,25 @@ module.exports = function(deployer, network, accounts) {
     var capPhase2 = 25e6; // Maximum cap (token)
     var capPhase3 = 50e6; // Maximum cap (token)
 
-    // Founders tokens
-    var foundersTokens = 10e6;
-    var stepLockedToken = (3600 * 1); // First release after stepReleaseLockedToken seconds, second after 2*stepReleaseLockedToken, etc..
+    var etherPriceUSD = 1000000; //1 million dollars ;-)
 
-    // Additional tokens
-    var additionalTokens = 40e6;
+    var rate1 = parseInt((etherPriceUSD / 0.25) * 1.3);
+    var rate2 = parseInt((etherPriceUSD / 0.25) * 1.1);
+    var rate3 = parseInt((etherPriceUSD / 0.25) * 1.0);
 
-    // Goal
-    var goal = 1000 * 1e18;
+    var cap1 = 10 * 1e6 * 1e18;
+    var cap2 = 25 * 1e6 * 1e18;
+    var cap3 = 50 * 1e6 * 1e18;
 
+    var foundersTokens = 10 * 1e6 * 1e18;
+    var stepLockedToken = 86400 * 30 * 6;
+    var additionalTokens = 40 * 1e6 * 1e18;
+    var goal = parseInt(1000000 / etherPriceUSD);
+
+    var overshoot = web3.toWei(3, 'ether');
     //kyc signers
     var kycSigners = [accounts[2], accounts[3]];
   }
-
 
   deployer.deploy(SafeMath);
   deployer.link(SafeMath, HivePowerCrowdsale);
@@ -78,11 +88,10 @@ module.exports = function(deployer, network, accounts) {
     HVT.address,
     wallet,
     startTime,
-    endTime,
-    [ratePhase1, ratePhase2, ratePhase3],
-    [capPhase1, capPhase2, capPhase3],
+    endTime, [rate1, rate2, rate3], [cap1, cap2, cap3],
     goal,
     additionalTokens,
     foundersTokens,
-    stepLockedToken);
+    stepLockedToken,
+    overshoot);
 };

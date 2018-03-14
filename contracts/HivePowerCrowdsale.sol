@@ -13,7 +13,7 @@ contract HivePowerCrowdsale is Ownable, ICOEngineInterface, KYCBase {
     using SafeMath for uint;
     enum State {Running,Success,Failure}
 
-    State state;
+    State public state;
 
     HVT public token;
 
@@ -53,13 +53,16 @@ contract HivePowerCrowdsale is Ownable, ICOEngineInterface, KYCBase {
     uint public foundersTokens;
 
     // vault for refunding
-    RefundVault vault;
+    RefundVault public vault;
 
     // addresses of time-locked founder vaults
     address [4] public timeLockAddresses;
 
     // step in seconds for token release
     uint public stepLockedToken;
+
+    // allowed overshoot when crossing the bonus barrier (in wei)
+    uint public overshoot;
 
     /**
      * event for token purchase logging
@@ -97,7 +100,7 @@ contract HivePowerCrowdsale is Ownable, ICOEngineInterface, KYCBase {
      *  approve() method from the _wallet account to the deployed contract address to assign
      *  the tokens to be sold by the ICO.
      */
-    function HivePowerCrowdsale(address [] kycSigner, address _token, address _wallet, uint _startTime, uint _endTime, uint [] _prices, uint [] _caps, uint _goal, uint _companyTokens, uint _foundersTokens, uint _stepLockedToken)
+    function HivePowerCrowdsale(address [] kycSigner, address _token, address _wallet, uint _startTime, uint _endTime, uint [] _prices, uint [] _caps, uint _goal, uint _companyTokens, uint _foundersTokens, uint _stepLockedToken, uint _overshoot)
         public
         KYCBase(kycSigner)
     {
@@ -120,6 +123,7 @@ contract HivePowerCrowdsale is Ownable, ICOEngineInterface, KYCBase {
         companyTokens = _companyTokens;
         foundersTokens = _foundersTokens;
         stepLockedToken = _stepLockedToken;
+        overshoot = _overshoot;
         state = State.Running;
         isPreallocated = false;
     }
@@ -161,7 +165,7 @@ contract HivePowerCrowdsale is Ownable, ICOEngineInterface, KYCBase {
         require(!ended());
 
         uint256 weiAmount = msg.value;
-        uint currentPrice = getPrice();
+        uint currentPrice = price();
         uint currentCap = getCap();
         uint tokens = weiAmount.mul(currentPrice);
         uint tokenRaised=totalTokens.sub(remainingTokens);
@@ -241,27 +245,15 @@ contract HivePowerCrowdsale is Ownable, ICOEngineInterface, KYCBase {
        vault.refund(msg.sender);
     }
 
-    // get current price as a function of the amount of sold token
-    function getPrice() internal view returns(uint){
-      uint tokenRaised=totalTokens-remainingTokens;
-      for (uint i=0;i<caps.length-1;i++){
-        if (tokenRaised < caps[i])
-        {
-          return(prices[i]);
-        }
-      }
-      return(prices[prices.length-1]);
-    }
-
     // get the next cap as a function of the amount of sold token
-    function getCap() internal view returns(uint){
+    function getCap() public view returns(uint){
       uint tokenRaised=totalTokens-remainingTokens;
       for (uint i=0;i<caps.length-1;i++){
         if (tokenRaised < caps[i])
         {
-          // allow for a 5 ether overshoot (only when bonus is applied)
-          uint tokenPerFiveEther = (5 ether) / prices[i];
-          return(caps[i]+tokenPerFiveEther);
+          // allow for a an overshoot (only when bonus is applied)
+          uint tokenPerOvershoot = overshoot * prices[i];
+          return(caps[i].add(tokenPerOvershoot));
         }
       }
       // but not on the total amount of tokens
@@ -296,7 +288,14 @@ contract HivePowerCrowdsale is Ownable, ICOEngineInterface, KYCBase {
 
     // return the price as number of tokens released for each ether
     function price() public view returns(uint){
-      return(getPrice());
+      uint tokenRaised=totalTokens-remainingTokens;
+      for (uint i=0;i<caps.length-1;i++){
+        if (tokenRaised < caps[i])
+        {
+          return(prices[i]);
+        }
+      }
+      return(prices[prices.length-1]);
     }
 
     // No payable fallback function, the tokens must be buyed using the functions buyTokens and buyTokensFor
