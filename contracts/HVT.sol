@@ -1,9 +1,9 @@
 pragma solidity 0.4.19;
 
-import 'zeppelin-solidity/contracts/token/ERC20/MintableToken.sol';
-import 'zeppelin-solidity/contracts/token/ERC20/BurnableToken.sol';
-import 'zeppelin-solidity/contracts/math/SafeMath.sol';
-import 'zeppelin-solidity/contracts/ownership/Ownable.sol';
+import './MintableToken.sol';
+import './BurnableToken.sol';
+import './SafeMath.sol';
+import './Ownable.sol';
 
 contract HVT is MintableToken, BurnableToken {
   using SafeMath for uint256;

@@ -1,7 +1,7 @@
 pragma solidity ^0.4.19;
 
 //import "./SafeMath.sol";
-import 'zeppelin-solidity/contracts/math/SafeMath.sol';
+import './SafeMath.sol';
 
 // Abstract base contract
 contract KYCBase {

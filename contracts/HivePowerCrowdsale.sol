@@ -1,9 +1,9 @@
 pragma solidity ^0.4.19;
 
-import 'zeppelin-solidity/contracts/math/SafeMath.sol';
-import 'zeppelin-solidity/contracts/ownership/Ownable.sol';
-import 'zeppelin-solidity/contracts/crowdsale/RefundVault.sol';
-import 'zeppelin-solidity/contracts/token/ERC20/TokenTimelock.sol';
+import './SafeMath.sol';
+import './Ownable.sol';
+import './RefundVault.sol';
+import './TokenTimelock.sol';
 import "./ICOEngineInterface.sol";
 import "./KYCBase.sol";
 import "./HVT.sol";

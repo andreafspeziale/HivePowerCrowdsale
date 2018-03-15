@@ -1,4 +1,3 @@
-var SafeMath = artifacts.require('zeppelin-solidity/contracts/math/SafeMath.sol');
 var HVT = artifacts.require('./HVT.sol');
 var HivePowerCrowdsale = artifacts.require('./HivePowerCrowdsale.sol');
 

@@ -102,7 +102,6 @@ const OTHER_ADDR = '0xC5fdf4076b8F3A5357c5E395ab970B5B54098Fef'.toLowerCase()
 const MAX_AMOUNT = '50000000000000000000' // 50 ether
 
 const getKycData = (userAddr, userid, icoAddr, pk) => {
-  // sha256("Eidoo icoengine authorization", icoAddress, buyerAddress, buyerId, maxAmount);
   const hash = abi.soliditySHA256(
     ['string', 'address', 'address', 'uint64', 'uint'], ['Eidoo icoengine authorization', icoAddr, userAddr, new BN(userid), new BN(MAX_AMOUNT)]
   )
@@ -126,12 +125,12 @@ const expectEvent = (res, eventName) => {
 
 const HivePowerCrowdsale = artifacts.require('HivePowerCrowdsale');
 const HVT = artifacts.require('HVT');
-
 const TokenTimelock = artifacts.require('TokenTimelock');
-//  https://github.com/AdExBlockchain/adex-token/blob/master/contracts/ADXToken.sol
+
+// Hive Power Crowdsale contract
 contract('HivePowerCrowdsale', function([_, investor, wallet, purchaser]) {
   // HVT has 18 decimals => all is multiplied by 1e18
-  //const ETHER_PRICE_USD = 1000000; //1 million dollars ;-)
+  //const ETHER_PRICE_USD = 500; // ether price in dollars
   //const RATE_1 = (ETHER_PRICE_USD / 0.25) * 1.3;
   //const RATE_2 = (ETHER_PRICE_USD / 0.25) * 1.1;
   //const RATE_3 = (ETHER_PRICE_USD / 0.25) * 1.0;
@@ -146,9 +145,6 @@ contract('HivePowerCrowdsale', function([_, investor, wallet, purchaser]) {
   const ADDITIONAL_TOKENS = 40000000000000; // 40 * 1e6 * 1e18;
   const GOAL = 1000000001; // 1000 wei
   const OVERSHOOT = 1000000000; // in wei
-
-  // const value = ether(1);
-  const value = 1e0;
 
   before(async function() {
     // Advance to the next block to correctly read time in the solidity "now" function interpreted by testrpc
