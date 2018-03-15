@@ -127,6 +127,7 @@ const expectEvent = (res, eventName) => {
 const HivePowerCrowdsale = artifacts.require('HivePowerCrowdsale');
 const HVT = artifacts.require('HVT');
 
+const TokenTimelock = artifacts.require('TokenTimelock');
 //  https://github.com/AdExBlockchain/adex-token/blob/master/contracts/ADXToken.sol
 contract('HivePowerCrowdsale', function([_, investor, wallet, purchaser]) {
   // HVT has 18 decimals => all is multiplied by 1e18
@@ -561,5 +562,198 @@ contract('HivePowerCrowdsale', function([_, investor, wallet, purchaser]) {
       //const WALLET_BALANCE_POST = web3.eth.getBalance(wallet);
       //console.log(WALLET_BALANCE_POST.toString());
     });
+
+    it('Test finalize not ok even if soft cap was reached', async function() {
+
+      const d = getKycData(investor, 1, this.crowdsale.address, SIGNER_PK);
+      // price should be the price with RATE_1
+      var price = await this.crowdsale.price();
+      price.should.be.bignumber.equal(RATE_1);
+      // cap should be equal to CAP_1+OVERSHOOT*RATE_1
+      var cap = await this.crowdsale.getCap();
+      cap.should.be.bignumber.equal(CAP_1 + OVERSHOOT * RATE_1);
+
+      var started = await this.crowdsale.started();
+      started.should.be.false;
+      var ended = await this.crowdsale.ended();
+      ended.should.be.false;
+
+      // increase time to start
+      await increaseTimeTo(this.startTime);
+
+      started = await this.crowdsale.started();
+      started.should.be.true;
+      ended = await this.crowdsale.ended();
+      ended.should.be.false;
+
+      // buy just enough token
+      const WEI = GOAL;
+      await this.crowdsale.buyTokens(d.id, d.max, d.v, d.r, d.s, {
+        from: investor,
+        value: WEI
+      });
+
+      // increase time to start
+      await increaseTimeTo(this.endTime);
+      ended = await this.crowdsale.ended();
+      ended.should.be.true;
+
+      // state should be running (=0)
+      var state = await this.crowdsale.state();
+      state.should.be.bignumber.equal(0);
+
+      // get refund should be rejected
+      await this.crowdsale.claimRefund({
+        from: investor
+      }).should.be.rejectedWith(EVMRevert);
+
+      // call finalizeNOK even if goal was reached
+      await this.crowdsale.finalizeNOK();
+
+      // state should be failure (=2)
+      state = await this.crowdsale.state();
+      state.should.be.bignumber.equal(2);
+
+      // get refund should be fulfilled
+      const receipt = await this.crowdsale.claimRefund({
+        from: investor
+      }).should.be.fulfilled;
+    });
+
+    it('Test founders token vaults', async function() {
+
+      const d = getKycData(investor, 1, this.crowdsale.address, SIGNER_PK);
+      // price should be the price with RATE_1
+      var price = await this.crowdsale.price();
+      price.should.be.bignumber.equal(RATE_1);
+      // cap should be equal to CAP_1+OVERSHOOT*RATE_1
+      var cap = await this.crowdsale.getCap();
+      cap.should.be.bignumber.equal(CAP_1 + OVERSHOOT * RATE_1);
+
+      var started = await this.crowdsale.started();
+      started.should.be.false;
+      var ended = await this.crowdsale.ended();
+      ended.should.be.false;
+
+      // increase time to start
+      await increaseTimeTo(this.startTime);
+
+      started = await this.crowdsale.started();
+      started.should.be.true;
+      ended = await this.crowdsale.ended();
+      ended.should.be.false;
+
+
+      // fill CAP_1
+      const WEI_1 = parseInt(CAP_1 / RATE_1);
+      await this.crowdsale.buyTokens(d.id, d.max, d.v, d.r, d.s, {
+        from: investor,
+        value: WEI_1
+      });
+
+      var remainingTokens = await this.crowdsale.remainingTokens();
+      remainingTokens.should.be.bignumber.equal(CAP_3 - CAP_1);
+      // price should be updated to phase 2
+      price = await this.crowdsale.price();
+      price.should.be.bignumber.equal(RATE_2);
+      cap = await this.crowdsale.getCap();
+      cap.should.be.bignumber.equal(CAP_2 + OVERSHOOT * RATE_2);
+
+      ended = await this.crowdsale.ended();
+      ended.should.be.false;
+
+      // fill CAP_2
+      const WEI_2 = parseInt((CAP_2 - CAP_1) / RATE_2);
+      await this.crowdsale.buyTokens(d.id, d.max, d.v, d.r, d.s, {
+        from: investor,
+        value: WEI_2
+      });
+
+      remainingTokens = await this.crowdsale.remainingTokens();
+      remainingTokens.should.be.bignumber.equal(CAP_3 - CAP_2);
+      price = await this.crowdsale.price();
+      price.should.be.bignumber.equal(RATE_3);
+      cap = await this.crowdsale.getCap();
+      cap.should.be.bignumber.equal(CAP_3);
+
+      ended = await this.crowdsale.ended();
+      ended.should.be.false;
+
+      // fill CAP_3
+      const WEI_3 = parseInt((CAP_3 - CAP_2) / RATE_3);
+      await this.crowdsale.buyTokens(d.id, d.max, d.v, d.r, d.s, {
+        from: investor,
+        value: WEI_3
+      });
+
+      remainingTokens = await this.crowdsale.remainingTokens();
+      remainingTokens.should.be.bignumber.equal(0);
+      ended = await this.crowdsale.ended();
+      ended.should.be.true;
+
+      // increase time to end
+      await increaseTimeTo(this.endTime);
+
+      // call finalize
+      await this.crowdsale.finalize();
+
+      // state should be success (=1)
+      state = await this.crowdsale.state();
+      state.should.be.bignumber.equal(1);
+
+      // get timelocks
+      var timeLock1 = TokenTimelock.at(await this.crowdsale.timeLockAddresses(0));
+      var timeLock2 = TokenTimelock.at(await this.crowdsale.timeLockAddresses(1));
+      var timeLock3 = TokenTimelock.at(await this.crowdsale.timeLockAddresses(2));
+      var timeLock4 = TokenTimelock.at(await this.crowdsale.timeLockAddresses(3));
+
+      // all locks should be locked
+      await timeLock1.release().should.be.rejectedWith(EVMRevert);
+      await timeLock2.release().should.be.rejectedWith(EVMRevert);
+      await timeLock3.release().should.be.rejectedWith(EVMRevert);
+      await timeLock4.release().should.be.rejectedWith(EVMRevert);
+
+      var walletBalance = await this.token.balanceOf(wallet);
+      walletBalance.should.be.bignumber.equal(ADDITIONAL_TOKENS);
+
+      // increase time to end + 1 * STEP_LOCKED_TOKENS
+      await increaseTimeTo(this.endTime+STEP_LOCKED_TOKENS * 1);
+      // first one can be unlocked
+      await timeLock1.release().should.be.fulfilled;
+      await timeLock2.release().should.be.rejectedWith(EVMRevert);
+      await timeLock3.release().should.be.rejectedWith(EVMRevert);
+      await timeLock4.release().should.be.rejectedWith(EVMRevert);
+
+      walletBalance = await this.token.balanceOf(wallet);
+      walletBalance.should.be.bignumber.equal(ADDITIONAL_TOKENS+FOUNDERS_TOKENS * 1 / 4);
+
+      // increase time to end + 2 * STEP_LOCKED_TOKENS
+      await increaseTimeTo(this.endTime+STEP_LOCKED_TOKENS * 2);
+      // second one can be unlocked
+      await timeLock2.release().should.be.fulfilled;
+      await timeLock3.release().should.be.rejectedWith(EVMRevert);
+      await timeLock4.release().should.be.rejectedWith(EVMRevert);
+
+      walletBalance = await this.token.balanceOf(wallet);
+      walletBalance.should.be.bignumber.equal(ADDITIONAL_TOKENS+FOUNDERS_TOKENS * 2 / 4);
+
+      // increase time to end + 3 * STEP_LOCKED_TOKENS
+      await increaseTimeTo(this.endTime+STEP_LOCKED_TOKENS * 3);
+      // third one can be unlocked
+      await timeLock3.release().should.be.fulfilled;
+      await timeLock4.release().should.be.rejectedWith(EVMRevert);
+
+      walletBalance = await this.token.balanceOf(wallet);
+      walletBalance.should.be.bignumber.equal(ADDITIONAL_TOKENS+FOUNDERS_TOKENS * 3 / 4);
+
+      // increase time to end + 4 * STEP_LOCKED_TOKENS
+      await increaseTimeTo(this.endTime+STEP_LOCKED_TOKENS * 4);
+      // fourth one can be unlocked
+      await timeLock4.release().should.be.fulfilled;
+
+      walletBalance = await this.token.balanceOf(wallet);
+      walletBalance.should.be.bignumber.equal(ADDITIONAL_TOKENS+FOUNDERS_TOKENS);
+    });
+
   });
 });
