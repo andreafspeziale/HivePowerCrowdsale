@@ -3,11 +3,12 @@ var HivePowerCrowdsale = artifacts.require('./HivePowerCrowdsale.sol');
 
 module.exports = function(deployer, network, accounts) {
   deployer.then(() => {
-    Promise.all([HVT.deployed(), HivePowerCrowdsale.deployed()]).then(results => {
-      var hvt = results[0]
-      var tokenSale = results[1]
-      hvt.transferOwnership(HivePowerCrowdsale.address)
-      tokenSale.preallocate()
+    HVT.deployed().then(function(hvt) {
+      return hvt.transferOwnership(HivePowerCrowdsale.address).then(function() {
+        return HivePowerCrowdsale.deployed().then(function(crowdsale) {
+          return crowdsale.preallocate();
+        });
+      });
     })
   })
 };

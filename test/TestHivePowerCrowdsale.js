@@ -529,7 +529,7 @@ contract('HivePowerCrowdsale', function([_, investor, wallet, purchaser]) {
         value: WEI
       });
 
-      // increase time to start
+      // increase time to end
       await increaseTimeTo(this.endTime);
       ended = await this.crowdsale.ended();
       ended.should.be.true;
@@ -589,7 +589,7 @@ contract('HivePowerCrowdsale', function([_, investor, wallet, purchaser]) {
         value: WEI
       });
 
-      // increase time to start
+      // increase time to end
       await increaseTimeTo(this.endTime);
       ended = await this.crowdsale.ended();
       ended.should.be.true;
