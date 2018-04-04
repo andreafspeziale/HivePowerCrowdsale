@@ -10,7 +10,7 @@ contract HVT is MintableToken, BurnableToken {
 
   string public name = "HiVe Token";
   string public symbol = "HVT";
-  uint256 public decimals = 18;
+  uint8 public decimals = 18;
 
   bool public enableTransfers = false;
 
