@@ -96,9 +96,7 @@ contract HivePowerCrowdsale is Ownable, ICOEngineInterface, KYCBase {
     event Preallocated(address indexed to, uint256 amount);
 
     /**
-     *  After you deployed the SampleICO contract, you have to call the ERC20
-     *  approve() method from the _wallet account to the deployed contract address to assign
-     *  the tokens to be sold by the ICO.
+     *  Constructor
      */
     function HivePowerCrowdsale(address [] kycSigner, address _token, address _wallet, uint _startTime, uint _endTime, uint [] _prices, uint [] _caps, uint _goal, uint _companyTokens, uint _foundersTokens, uint _stepLockedToken, uint _overshoot)
         public
