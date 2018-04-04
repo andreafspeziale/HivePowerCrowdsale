@@ -133,9 +133,10 @@ contract HivePowerCrowdsale is Ownable, ICOEngineInterface, KYCBase {
       require(!isPreallocated);
 
       // mint tokens for team founders in timelocked vaults
-      uint amount = foundersTokens.div(4); //amount of token per vault
+      uint numTimelocks = 4;
+      uint amount = foundersTokens / numTimelocks; //amount of token per vault
       uint256 releaseTime = endTime;
-      for(uint256 i=0; i < 4; i++)
+      for(uint256 i=0; i < numTimelocks; i++)
       {
         // update releaseTime according to the step
         releaseTime = releaseTime.add(stepLockedToken);
@@ -168,11 +169,11 @@ contract HivePowerCrowdsale is Ownable, ICOEngineInterface, KYCBase {
         uint currentPrice = price();
         uint currentCap = getCap();
         uint tokens = weiAmount.mul(currentPrice);
-        uint tokenRaised=totalTokens.sub(remainingTokens);
+        uint tokenRaised = totalTokens - remainingTokens;
         //check if tokens can be minted
         require(tokenRaised.add(tokens) <= currentCap);
 
-        weiRaised = weiRaised.add(weiAmount);
+        weiRaised = weiRaised + weiAmount;
         remainingTokens = remainingTokens.sub(tokens);
 
         // mint tokens and transfer funds

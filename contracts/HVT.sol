@@ -3,7 +3,6 @@ pragma solidity 0.4.21;
 import './MintableToken.sol';
 import './BurnableToken.sol';
 import './SafeMath.sol';
-import './Ownable.sol';
 
 contract HVT is MintableToken, BurnableToken {
   using SafeMath for uint256;
