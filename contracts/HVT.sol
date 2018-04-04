@@ -35,6 +35,16 @@ contract HVT is MintableToken, BurnableToken {
     super.burn(_value);
   }
 
+  function increaseApproval(address _spender, uint _addedValue) public returns (bool) {
+    require(enableTransfers);
+    super.increaseApproval(_spender, _addedValue);
+  }
+
+  function decreaseApproval(address _spender, uint _subtractedValue) public returns (bool) {
+    require(enableTransfers);
+    super.decreaseApproval(_spender, _subtractedValue);
+  }
+
   // enable token transfers
   function enableTokenTransfers() public onlyOwner {
     enableTransfers = true;
