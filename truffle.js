@@ -19,6 +19,13 @@ module.exports = {
       gas: 4700000,
       gasPrice: 65000000000,
       network_id: 3,
+    },
+    "ropsten_queen": {
+      host: "195.176.65.234",
+      port: 8745,
+      gas: 4700000,
+      gasPrice: 65000000000,
+      network_id: 3,
     }
   }
 }

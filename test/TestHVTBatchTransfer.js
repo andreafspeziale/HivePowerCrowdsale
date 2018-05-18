@@ -61,8 +61,8 @@ contract('HVT', function([owner, investor1, investor2, investor3]) {
   // Create the HivePowerCrowdsale object
   beforeEach(async function() {
     this.token = await HVT.new();
-    this.token.mint(owner, TOTAL_TOKENS);
-    this.token.enableTokenTransfers();
+    await this.token.mint(owner, TOTAL_TOKENS);
+    await this.token.enableTokenTransfers();
     gasUsed = 0;
   });
 
@@ -114,14 +114,14 @@ contract('HVT', function([owner, investor1, investor2, investor3]) {
   });
 
   describe('HVT gas measurements:', function() {
-    it('test successful normal transfer', async function() {
-      for (var i = 0; i < LONG_ADDRESS.length; i++) {
-        receipt = await this.token.transfer(LONG_ADDRESS[i], LONG_TOKEN_TRANSFER_SINGLE);
-        gasUsed += receipt.receipt.gasUsed;
-      }
-      console.log('GasUsed:' + gasUsed);
-      (await this.token.balanceOf(owner)).should.be.zero;
-    });
+    // it('test successful normal transfer', async function() {
+    //   for (var i = 0; i < LONG_ADDRESS.length; i++) {
+    //     receipt = await this.token.transfer(LONG_ADDRESS[i], LONG_TOKEN_TRANSFER_SINGLE);
+    //     gasUsed += receipt.receipt.gasUsed;
+    //   }
+    //   console.log('GasUsed:' + gasUsed);
+    //   (await this.token.balanceOf(owner)).should.be.zero;
+    // });
 
     it('test successful batch transfer with same amount for everyone', async function() {
       receipt = await this.token.batchTransferSame(LONG_ADDRESS, LONG_TOKEN_TRANSFER_SINGLE);
