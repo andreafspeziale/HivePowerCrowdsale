@@ -48,4 +48,38 @@ contract HVT is MintableToken, BurnableToken {
   function enableTokenTransfers() public onlyOwner {
     enableTransfers = true;
   }
+
+  // batch transfer with different amounts for each address
+  function batchTransferDiff(address[] _to, uint256[] _amount) public {
+    require(enableTransfers);
+    require(_to.length == _amount.length);
+    uint256 totalAmount = arraySum(_amount);
+    require(totalAmount <= balances[msg.sender]);
+    balances[msg.sender] = balances[msg.sender].sub(totalAmount);
+    for(uint i;i < _to.length;i++){
+      balances[_to[i]] = balances[_to[i]].add(_amount[i]);
+      Transfer(msg.sender,_to[i],_amount[i]);
+    }
+  }
+
+  // batch transfer with same amount for each address
+  function batchTransferSame(address[] _to, uint256 _amount) public {
+    require(enableTransfers);
+    uint256 totalAmount = _amount.mul(_to.length);
+    require(totalAmount <= balances[msg.sender]);
+    balances[msg.sender] = balances[msg.sender].sub(totalAmount);
+    for(uint i;i < _to.length;i++){
+      balances[_to[i]] = balances[_to[i]].add(_amount);
+      Transfer(msg.sender,_to[i],_amount);
+    }
+  }
+
+  // get sum of array values
+  function arraySum(uint256[] _amount) internal pure returns(uint256){
+    uint256 totalAmount;
+    for(uint i;i < _amount.length;i++){
+      totalAmount = totalAmount.add(_amount[i]);
+    }
+    return totalAmount;
+  }
 }
