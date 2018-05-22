@@ -1,0 +1,22 @@
+{
+  "name": "hivepowercrowdsale",
+  "version": "1.0.0",
+  "description": "Hive Power Crowdsale",
+  "main": "truffle-config.js",
+  "directories": {
+    "test": "test"
+  },
+  "scripts": {
+    "test": "truffle test"
+  },
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/hive-power/HivePowerCrowdsale.git"
+  },
+  "author": "Hive Power Sagl",
+  "license": "MIT",
+  "bugs": {
+    "url": "https://github.com/hive-power/HivePowerCrowdsale/issues"
+  },
+  "homepage": "https://github.com/hive-power/HivePowerCrowdsale#readme"
+}
