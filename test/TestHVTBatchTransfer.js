@@ -40,15 +40,15 @@ const HVT = artifacts.require('HVT');
 // HVT contract
 contract('HVT', function([owner, investor1, investor2, investor3]) {
 
-  const TOTAL_TOKENS = 1000;
-  const TOKEN_TRANSFER_SINGLE = 10;
-  const TOKEN_TRANSFER_SINGLE_TOO_MUCH = 334;
-  const TOKEN_TRANSFER_MULTI = [100, 200, 300];
-  const TOKEN_TRANSFER_MULTI_TOO_MUCH = [400, 500, 600];
+  const TOTAL_TOKENS = 1000e18;
+  const TOKEN_TRANSFER_SINGLE = 10e18;
+  const TOKEN_TRANSFER_SINGLE_TOO_MUCH = 334e18;
+  const TOKEN_TRANSFER_MULTI = [100e18, 200e18, 300e18];
+  const TOKEN_TRANSFER_MULTI_TOO_MUCH = [400e18, 500e18, 600e18];
 
   const LONG_ADDRESS = fillArray(investor1, 100);
-  const LONG_TOKEN_TRANSFER_SINGLE = 10;
-  const LONG_TOKEN_TRANSFER_MULTI = fillArray(10, 100);
+  const LONG_TOKEN_TRANSFER_SINGLE = 10e18;
+  const LONG_TOKEN_TRANSFER_MULTI = fillArray(10e18, 100);
 
   var gasUsed = 0;
   var receipt;
@@ -60,6 +60,7 @@ contract('HVT', function([owner, investor1, investor2, investor3]) {
 
   // Create the HivePowerCrowdsale object
   beforeEach(async function() {
+    this.timeout(600000);
     this.token = await HVT.new();
     await this.token.mint(owner, TOTAL_TOKENS);
     await this.token.enableTokenTransfers();
@@ -85,7 +86,7 @@ contract('HVT', function([owner, investor1, investor2, investor3]) {
     });
 
     it('test unsuccessful normal transfer', async function() {
-      await this.token.transfer(investor1, TOTAL_TOKENS + 1).should.be.rejectedWith(EVMRevert);
+      await this.token.transfer(investor1, TOTAL_TOKENS * 2).should.be.rejectedWith(EVMRevert);
     });
 
     it('test successful batch transfer with same amount for everyone', async function() {
