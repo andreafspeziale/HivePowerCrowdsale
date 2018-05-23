@@ -3,6 +3,8 @@ var HVT = artifacts.require('./HVT.sol');
 var HivePowerCrowdsale = artifacts.require('./HivePowerCrowdsale.sol');
 const moment = require('moment');
 
+const stagingKYCSigners = ['0x890d4c6b94e6f54bdbb58530f425c2a5a3033361', '0xc5fdf4076b8f3a5357c5e395ab970b5b54098fef']
+
 module.exports = function(deployer, network, accounts) {
 
   if (network == 'development') {
