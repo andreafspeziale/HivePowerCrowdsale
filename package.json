@@ -20,8 +20,12 @@
   },
   "homepage": "https://github.com/hive-power/HivePowerCrowdsale#readme",
   "dependencies": {
+    "chai": "^4.1.2",
+    "chai-as-promised": "^7.1.1",
+    "chai-bignumber": "^2.0.2",
     "ethereumjs-abi": "^0.6.5",
     "ethereumjs-util": "^5.2.0",
-    "lodash": "^4.17.10"
+    "lodash": "^4.17.10",
+    "moment": "^2.22.1"
   }
 }
