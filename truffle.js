@@ -13,6 +13,13 @@ module.exports = {
       gasPrice: 65000000000,
       network_id: "*" // Match any network id
     },
+    "eidoo": { // To be used only during the simulation phase with an enabled IP 
+      host: "wally-api-dev.undo.it",
+      port: 8545,
+      gas: 4700000,
+      gasPrice: 65000000000,
+      network_id: "*" // Match any network id
+    },
     "ropsten": {
       host: "localhost",
       port: 8545,
